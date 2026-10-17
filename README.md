@@ -14,6 +14,34 @@ und verwandelt visuelle Daten in strukturierte, CAFM-fähige FM-Daten.
 - **`?retro=1`** schaltet auf den Pixel-/CRT-Look früherer Versionen um
   (Arcade-Gag für Messen und Nostalgie).
 
+## Was v3.2 gegenüber v3.1 ändert
+
+v3.1 hatte HD-Formen, aber flaches Licht: jede Szene war gleichmäßig hell.
+v3.2 baut eine echte Licht- und Materialpipeline **über** das bestehende
+Rendering (Gameplay wieder unberührt):
+
+- **Dynamische Licht-Engine**: pro Frame wird eine halb auflösende Lightmap
+  (240×135) mit vertikal abgestuftem Ambient gefüllt, farbige Lichtquellen
+  addiert und mit `multiply` über die Szene gelegt. Registriert via
+  `addLight(x, y, r, "r,g,b", a)`: Deckenlampen (mit Flackern, Ausfällen und
+  Jitter), grüne Exit-Schilder, der Cyan-Scanner-Bloom des Spielers (heißer
+  Kern + Streulicht), Helmlampe, Pickups, Türöffnungen, glühende Ziel-Assets.
+  Scan-UI, Floater und HUD werden bewusst **nach** dem Licht gezeichnet und
+  bleiben lesbar. Retro-Modus (`?retro=1`) überspringt die Engine komplett.
+- **Prozedurale Materialien**: fBm-Value-Noise erzeugt Beton-, Metall- und
+  Schrubber-Texturen in Cache-Canvases; `grime()` kachelt sie weltverankert
+  (multiply/screen) auf Schale, Sockelzone, Böden, Plattformen und
+  Maschinenkörper — jedes Theme wirkt damit materiallich anders.
+- **Kulissen-Dichte**: Boden-Clutter (Ölflecken, Inbetriebnahme-Kreide,
+  Schutt, Kabelringe, Wandläufer, geschruberte Inseln), durchhängende Kabel
+  zwischen Trassenaufhängungen und große **Hero-Behälter** (Drucktank mit
+  Leiter/Manometer, Kesselreihe mit Brenner-Piloten) als Maßstabs-Kulisse.
+- **Übergangs-UX**: Die Erklärung nach einer Wissens-Aufgabe schließt jetzt
+  auch auf Klick (vorher nur SPACE oder 2,2 s Timer — Maus-Spieler klickten
+  ins Leere). Der Klick-Hook sitzt auf der frisch erzeugten Karte, nicht auf
+  dem Panel-Container: der Klick auf die Antwortoption bubbelt sonst durch
+  den alten DOM-Pfad und würde die Erklärung im selben Event schließen.
+
 ## Was v3.0 gegenüber v2.x ändert
 
 v2.x war Pixel-Art. v3.0 ersetzt den kompletten Render-Layer durch eine

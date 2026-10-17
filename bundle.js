@@ -91,7 +91,7 @@
     BUILDING_ASSETS: 400,
     FIELDS_PER_RECORD: 8,
 
-    VERSION: "3.1.0",
+    VERSION: "3.2.0",
     HS_KEY: "at_handover_hs_v2",
   };
 
@@ -1554,6 +1554,7 @@
     g.addColorStop(1, shade(base, -0.32));
     rrectPath(x, y, w, h, rr);
     ctx.fillStyle = g; ctx.fill();
+    grime(x, y, w, h, TEX.metal, 0.26, "multiply", 64);
     ctx.strokeStyle = "rgba(226,232,240,0.22)";
     ctx.lineWidth = 0.7;
     rrectPath(x + 0.4, y + 0.4, w - 0.8, h - 0.8, Math.max(0.5, rr - 0.5));
@@ -1582,6 +1583,127 @@
     ctx.restore();
   }
 
+  /* --- procedural material textures ------------------------------------------
+     Grayscale noise canvases (256², seeded, generated once) used as multiply /
+     screen overlays: concrete mottling, brushed metal, floor scrub marks.
+     grime() tiles them world-anchored so the pattern is stable per position. */
+  const TEX = (function () {
+    const S = 256;
+    function valueNoise(seed) {
+      const N = 64, lat = new Float32Array(N * N);
+      let s = seed;
+      const r = () => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+      for (let i = 0; i < N * N; i++) lat[i] = r();
+      return (x, y) => {
+        const fx = x * N, fy = y * N;
+        const x0 = Math.floor(fx) % N, y0 = Math.floor(fy) % N;
+        const x1 = (x0 + 1) % N, y1 = (y0 + 1) % N;
+        const tx = fx - Math.floor(fx), ty = fy - Math.floor(fy);
+        const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+        const a = lat[y0 * N + x0], b = lat[y0 * N + x1], c = lat[y1 * N + x0], d = lat[y1 * N + x1];
+        return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+      };
+    }
+    function fbm(seed, oct) {
+      const ns = [];
+      for (let o = 0; o < oct; o++) ns.push(valueNoise(seed + o * 101));
+      return (x, y) => {
+        let v = 0, amp = 0.5, f = 1, tot = 0;
+        for (let o = 0; o < oct; o++) {
+          v += ns[o]((x * f) % 1, (y * f) % 1) * amp;
+          tot += amp; amp *= 0.5; f *= 2;
+        }
+        return v / tot;
+      };
+    }
+    function mk(fn) {
+      const c = document.createElement("canvas");
+      c.width = S; c.height = S;
+      const g = c.getContext("2d");
+      const img = g.createImageData(S, S);
+      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+        const v = Math.max(0, Math.min(255, Math.round(fn(x / S, y / S))));
+        const o = (y * S + x) * 4;
+        img.data[o] = img.data[o + 1] = img.data[o + 2] = v;
+        img.data[o + 3] = 255;
+      }
+      g.putImageData(img, 0, 0);
+      return c;
+    }
+    const conc = fbm(9001, 4);                          // concrete: mottled, pores
+    const concP = valueNoise(4242);
+    const metal = fbm(777, 3);
+    const metalP = valueNoise(31337);
+    const scrub = fbm(555, 3);
+    return {
+      concrete: mk((x, y) => 235 - conc(x, y) * 46 - (concP((x * 3.1) % 1, (y * 3.1) % 1) > 0.93 ? 46 : 0)),
+      metal: mk((x, y) => 232 - metal((x * 0.22) % 1, (y * 3.4) % 1) * 26 - (metalP((x * 2.3) % 1, (y * 17) % 1) > 0.96 ? 38 : 0)),
+      scrub: mk((x, y) => 238 - scrub((x * 4.2) % 1, (y * 0.6) % 1) * 20),
+    };
+  })();
+
+  /** Composite a material texture over an area, world-anchored tiles.
+      mode: "multiply" (default) darkens with grime, "screen" lifts highlights. */
+  function grime(x, y, w, h, tex, a, mode, tile) {
+    if (!HD) return;
+    ctx.save();
+    ctx.globalCompositeOperation = mode || "multiply";
+    ctx.globalAlpha = a;
+    const t = tile || 128;
+    const y0 = Math.floor(y / t) * t, x0 = Math.floor(x / t) * t;
+    for (let ty = y0; ty < y + h; ty += t)
+      for (let tx = x0; tx < x + w; tx += t)
+        ctx.drawImage(tex, tx, ty, t, t);
+    ctx.restore();
+  }
+
+  /* --- dynamic 2D lighting -----------------------------------------------------
+     A half-resolution lightmap multiplies the whole world: a dim, theme-tinted
+     ambient base with colored holes punched by registered lights. Lights are
+     collected during drawing (world coordinates) and composited in render()
+     BEFORE the gameplay-critical overlays, so scan UI and floaters stay
+     readable. Retro mode skips the lightmap and keeps its classic look.       */
+  const LM_W = 240, LM_H = 135;
+  const lmCv = document.createElement("canvas");
+  lmCv.width = LM_W; lmCv.height = LM_H;
+  const lm = lmCv.getContext("2d");
+  const lights = [];
+  function addLight(x, y, r, rgb, a) {
+    lights.push({ x, y, r, rgb, a });
+  }
+  function applyLighting() {
+    if (!HD || !Game.lvl) { lights.length = 0; return; }
+    const S = SCN[Game.lvl.theme] || SCN.plant;
+    lm.setTransform(1, 0, 0, 1, 0, 0);
+    lm.globalCompositeOperation = "source-over";
+    // ambient with a vertical grade: walls keep material texture readable,
+    // the floor zone settles darker — pools and contact shadows live there
+    const amb = S.ambient || "rgb(170,180,205)";
+    const dim = amb.replace(/\d+/g, n => Math.round(n * 0.82));
+    const ag = lm.createLinearGradient(0, 0, 0, LM_H);
+    ag.addColorStop(0, amb);
+    ag.addColorStop(1, dim);
+    lm.fillStyle = ag;
+    lm.fillRect(0, 0, LM_W, LM_H);
+    lm.globalCompositeOperation = "lighter";
+    const k = LM_W / CFG.W, ox = -Game.cam.x * k;
+    for (const L of lights) {
+      const lx = L.x * k + ox, ly = L.y * k, lr = Math.max(2, L.r * k);
+      const g = lm.createRadialGradient(lx, ly, 0, lx, ly, lr);
+      g.addColorStop(0, "rgba(" + L.rgb + "," + L.a + ")");
+      g.addColorStop(1, "rgba(" + L.rgb + ",0)");
+      lm.fillStyle = g;
+      lm.fillRect(lx - lr, ly - lr, lr * 2, lr * 2);
+    }
+    lights.length = 0;
+    ctx.save();
+    ctx.setTransform(VIEW.s, 0, 0, VIEW.s, 0, 0);        // screen space
+    ctx.globalCompositeOperation = "multiply";
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(lmCv, 0, 0, CFG.W, CFG.H);
+    ctx.restore();
+  }
+
   function render() {
     const p = Game.player;
     const targetCam = clamp(p.x + p.w / 2 - CFG.W / 2, 0, Game.lvl.w - CFG.W);
@@ -1603,6 +1725,7 @@
     drawPlats();
     drawFloorMarks();      // painted markings belong ON the slab, not behind it
     drawLampPools();       // lamp pools sit ON the floor, above its markings
+    drawClutter();         // stains/chalk/debris: the density layer
     drawAmbientDust();
     drawPickups();
     drawAssets();
@@ -1610,9 +1733,24 @@
     drawVents();
     drawParticles();
     drawPlayer();
+    // the player is a light source too: scanner bloom and the helmet lamp
+    // punch through the ambient darkness exactly where the action is
+    {
+      const p = Game.player, e = eye(p);
+      const pc = Input.held("scan") ? "255,150,50" : "34,211,238";
+      addLight(e.x + p.facing * 12, e.y, 14, pc, 0.55);        // hot core
+      addLight(e.x + p.facing * 16, e.y + 3, 30, pc, 0.30);    // spill
+      if (lampActive()) {
+        const lx = p.x + p.w / 2 + p.facing * 22, ly = p.y + 6;
+        addLight(lx + p.facing * 16, ly + 8, CFG.LIGHT_RANGE, "255,232,180", 0.50);
+      }
+    }
     // Darkness dims the WORLD (assets, player) — but never the scanner readout:
     // "ZU DUNKEL" has to be legible precisely when everything else is not.
     drawDarkness();
+    // Lighting composites BEFORE the feedback overlays: status lines, target
+    // frames and floaters stay fully readable even in dark corners.
+    applyLighting();
     drawScanUI();
     drawFloaters();
 
@@ -1654,7 +1792,7 @@
       ceil: "#131f36", ceilHi: "#1c2d4a",
       lamp: "rgba(255,236,190,", lampRGB: "255,236,190",
       haze: "rgba(255,205,140,0.05)",
-      fog: "140,185,240", horizon: "rgba(180,215,255,0.10)", grade: "rgba(255,208,130,0.14)",
+      fog: "140,185,240", horizon: "rgba(180,215,255,0.10)", grade: "rgba(255,208,130,0.14)", ambient: "rgb(180,190,212)",
       wallProps: ["scaffold", "cableDrum", "pallets", "doorSteel", "signPlate", "extinguisher"],
       midProps: ["ductBox", "pipeColumn", "scaffold", "conduits", "pallets"],
       nearProps: ["ahuBox", "cabinetRow", "stairFlight", "tank"],
@@ -1668,7 +1806,7 @@
       ceil: "#0c1728", ceilHi: "#16253c",
       lamp: "rgba(214,240,255,", lampRGB: "214,240,255",
       haze: "rgba(120,200,255,0.04)",
-      fog: "90,170,230", horizon: "rgba(90,200,255,0.08)", grade: "rgba(110,190,255,0.13)", dado: "rgba(185,200,222,0.10)",
+      fog: "90,170,230", horizon: "rgba(90,200,255,0.08)", grade: "rgba(110,190,255,0.13)", dado: "rgba(185,200,222,0.10)", ambient: "rgb(104,118,158)",
       wallProps: ["hydrant", "extinguisher", "exitSign", "doorSteel", "signPlate", "radiator"],
       midProps: ["manifold", "pipeColumn", "ductBox", "pumpSet", "conduits", "vessel"],
       nearProps: ["cabinetRow", "tank", "ahuBox", "pumpSet", "stairFlight"],
@@ -1682,7 +1820,7 @@
       lamp: "rgba(255,225,180,", lampRGB: "255,225,180",
       ceil: "#0e1a2d", ceilHi: "#18273e",
       haze: "rgba(255,150,70,0.05)",
-      fog: "235,160,95", horizon: "rgba(255,150,70,0.10)", grade: "rgba(255,140,70,0.15)", dado: "rgba(225,190,150,0.10)",
+      fog: "235,160,95", horizon: "rgba(255,150,70,0.10)", grade: "rgba(255,140,70,0.15)", dado: "rgba(225,190,150,0.10)", ambient: "rgb(160,142,130)",
       wallProps: ["exitSign", "hydrant", "fileBoxes", "signPlate", "doorSteel", "extinguisher"],
       midProps: ["manifold", "ductBox", "pipeColumn", "fileBoxes", "vessel", "pumpSet"],
       nearProps: ["cabinetRow", "ahuBox", "tank", "cabinetRow"],
@@ -1818,6 +1956,7 @@
       // running down the wall to the floor
       glow(x + 8, sy + 3.5, 22, "52,211,153", 0.22);
       glow(x + 8, y, 26, "52,211,153", 0.05);
+      addLight(x + 8, sy + 16, 46, "52,211,153", 0.42);
       ctx.fillStyle = "rgba(52,211,153,0.10)"; ctx.fillRect(x - 5, sy - 4, 26, 14);
       ctx.fillStyle = "#12503c"; ctx.fillRect(x, sy, 16, 7);
       ctx.fillStyle = "#34D399"; ctx.fillRect(x + 1, sy + 1, 14, 5);
@@ -1938,6 +2077,19 @@
       if (sx < 0 || sx > CFG.W) continue;
       ctx.fillStyle = S.mid; ctx.fillRect(cam + sx, 16, 2, y - 16);
     }
+    // slack cables sagging between the hangers — nobody tensioned these
+    ctx.strokeStyle = "rgba(14,22,38,0.9)";
+    ctx.lineWidth = 1.3;
+    for (let i = hstart; i <= hstart + CFG.W / hstep + 1; i++) {
+      const x1 = i * hstep - off, x2 = x1 + hstep;
+      if (x2 < 0 || x1 > CFG.W) continue;
+      if (hash01(i * 29) < 0.3) continue;
+      const sag = 10 + hash01(i * 7) * 8;
+      ctx.beginPath();
+      ctx.moveTo(cam + x1 + 1, y + 2);
+      ctx.quadraticCurveTo(cam + (x1 + x2) / 2, y + 2 + sag, cam + x2 + 1, y + 2);
+      ctx.stroke();
+    }
   }
 
   /** Insulated pipe run with hangers and medium-code bands. */
@@ -1977,6 +2129,9 @@
     const par = 0.16, off = cam * par;
     ctx.fillStyle = S.far;
     ctx.fillRect(cam, 0, CFG.W, CFG.H);
+    // concrete material: mottled fBm multiply + faint highlight lift
+    grime(cam, 0, CFG.W, CFG.H, TEX.concrete, 0.42, "multiply", 160);
+    grime(cam, 0, CFG.W, CFG.H, TEX.concrete, 0.14, "screen", 160);
     // formwork panel grid (2.5 m panels ≈ 60 px)
     const pw = 60, start = Math.floor(off / pw);
     for (let i = start; i <= start + CFG.W / pw + 2; i++) {
@@ -2035,6 +2190,7 @@
       for (let by = wy + 16; by < wy + h; by += 24) ctx.fillRect(wx + 2, by, w - 4, 2);
       ctx.fillStyle = S.far; ctx.fillRect(wx - 3, wy - 3, w + 6, 3);       // lintel
       // volumetric daylight: wide soft shaft + narrow hot core + dust motes
+      addLight(wx + w / 2, wy + h / 2, 110, "170,205,255", 0.42);
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
       const g = ctx.createLinearGradient(wx, wy, wx + 30, wy + h + 90);
@@ -2090,7 +2246,7 @@
       if (sx < -40 || sx > CFG.W + 20) continue;
       const wx = cam + sx;
       const inten = 0.45 + hash01(i * 57) * 0.85;             // 0.45 … 1.3
-      const dead = hash01(i * 13 + 5) < 0.12;                 // the dark gaps
+      const dead = hash01(i * 13 + 5) < 0.08;                 // the dark gaps
       const flickers = hash01(i * 91) < 0.22;
       const bad = dead || (flickers && ((Game.frame + i * 37) % 96) < 12);
       ctx.fillStyle = S.ceilHi; ctx.fillRect(wx, 18, 34, 3);
@@ -2112,6 +2268,7 @@
         ctx.closePath(); ctx.fill();
         ctx.restore();
         lampPools.push({ x: wx + 17, r: 34 + 26 * live, rgb: S.lampRGB, a: 0.055 * live });
+        addLight(wx + 17 + (hash01(i * 7) - 0.5) * 14, 96, 150 * live, S.lampRGB, 0.58 * live);
       }
     }
   }
@@ -2240,6 +2397,7 @@
 
     // --- plant layer (0.7), the big silhouettes ---
     propLayer(cam, 0.7, 186, CFG.GROUND_Y, S.nearProps, 29, S);
+    drawHeroVessels(cam, S);
     if (S.trays > 1) drawTray(cam, 0.7, 78, S);
     if (S.sprinkler) drawSprinkler(cam, 0.7, 96, S);
     depthFog(cam, S, 0.09);
@@ -2278,6 +2436,7 @@
         const pg = ctx.createLinearGradient(0, pl.y, 0, pl.y + pl.h);
         pg.addColorStop(0, PAL.metalHi); pg.addColorStop(0.35, PAL.metal); pg.addColorStop(1, PAL.metalLo);
         ctx.fillStyle = pg; ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
+        grime(pl.x, pl.y, pl.w, pl.h, TEX.metal, 0.30, "multiply", 64);
         ctx.fillStyle = PAL.orange; ctx.fillRect(pl.x, pl.y, pl.w, 2);
         ctx.fillStyle = "rgba(255,255,255,0.30)"; ctx.fillRect(pl.x, pl.y, pl.w, 1);
         ctx.fillStyle = PAL.metalLo; ctx.fillRect(pl.x, pl.y + pl.h - 2, pl.w, 2);
@@ -2288,6 +2447,8 @@
         const pg = ctx.createLinearGradient(0, pl.y, 0, pl.y + pl.h);
         pg.addColorStop(0, PAL.floorTop); pg.addColorStop(1, PAL.floor);
         ctx.fillStyle = pg; ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
+        // scrub marks: directional wear where feet actually walk
+        grime(pl.x, pl.y, pl.w, Math.min(pl.h, 10), TEX.scrub, 0.28, "multiply", 96);
         ctx.fillStyle = "rgba(226,232,240,0.35)"; ctx.fillRect(pl.x, pl.y, pl.w, 1);
         ctx.fillStyle = PAL.metalHi;
         for (let x = pl.x + 4; x < pl.x + pl.w - 2; x += 10) ctx.fillRect(x, pl.y + 6, 1, 1);
@@ -2348,6 +2509,8 @@
         // breathing colored light instead of a flat marker
         glow(a.x + a.w / 2, a.y + a.h / 2, a.w + 20, "255,120,20",
           0.14 + 0.05 * Math.sin(Game.frame * 0.25));
+        addLight(a.x + a.w / 2, a.y + a.h / 2, 46, "255,120,20",
+          0.15 + 0.06 * Math.sin(Game.frame * 0.25));
       }
       drawAssetByType(a);
       shadeSprite(a.x, a.y, a.w, a.h);
@@ -2362,6 +2525,7 @@
         ctx.fillStyle = "rgba(52,211,153,0.18)";
         ctx.fillRect(a.x - 2, a.y - 2, a.w + 4, a.h + 4);
         glow(a.x + a.w / 2, a.y + a.h / 2, a.w + 8, "52,211,153", 0.10);
+        addLight(a.x + a.w / 2, a.y + a.h / 2, 24, "52,211,153", 0.12);
         ctx.fillStyle = PAL.green;
         ctx.fillRect(a.x + a.w - 6, a.y + 2, 4, 4);
         tinyText("OK", a.x + a.w / 2 - 4, a.y - 6, PAL.green);
@@ -2667,6 +2831,7 @@
       const bob = Math.sin(Game.frame * 0.1) * 1.5;
       glow(pk.x + pk.w / 2, pk.y + pk.h / 2 + bob, pk.w + 16, "250,204,21",
         0.12 + 0.05 * Math.sin(Game.frame * 0.18));
+      addLight(pk.x + pk.w / 2, pk.y + pk.h / 2 + bob, 34, "250,204,21", 0.48);
       if (HD) {
         // glossy cell with a specular strip
         metalBody(pk.x, pk.y + bob, pk.w, pk.h, "#3a465c", 1.5);
@@ -2733,6 +2898,152 @@
       ctx.fill();
     }
     ctx.restore();
+  }
+
+  /** Floor clutter: stains, chalk marks, debris, cable coils — the density
+      layer that makes a floor read as a WORKING floor. Deliberately dark,
+      small and below the walk line so nothing competes with scannable assets. */
+  function drawClutter() {
+    const cam = Game.cam.x;
+    const seed = [...(Game.lvl ? Game.lvl.name : "")].reduce((a, c) => a + c.charCodeAt(0), 7);
+    const span = Game.lvl.w || CFG.W;
+    ctx.save();
+    for (let i = 0; i < span / 36; i++) {
+      const sx = hash01(i * 37 + seed) * (span - 40);
+      if (sx < cam - 30 || sx > cam + CFG.W + 30) continue;
+      const gy = CFG.GROUND_Y + 3 + hash01(i * 11 + seed) * 5;
+      const kind = (hash01(i * 53 + seed) * 6) | 0;
+      if (kind === 0) {
+        // oil stain, multiply-dark with a faint sheen
+        ctx.globalCompositeOperation = "multiply";
+        ctx.fillStyle = "rgba(30,26,20,0.62)";
+        ctx.beginPath();
+        ctx.ellipse(sx, gy, 9 + hash01(i * 3) * 8, 2.6, 0, 0, TAU);
+        ctx.fill();
+      } else if (kind === 1) {
+        // commissioning chalk mark
+        ctx.globalCompositeOperation = "source-over";
+        ctx.strokeStyle = "rgba(214,226,242,0.52)";
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(sx, gy); ctx.lineTo(sx + 12 + hash01(i * 5) * 8, gy - 1);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(214,226,242,0.52)";
+        ctx.fillRect(sx + 3, gy - 3, 1, 2); ctx.fillRect(sx + 8, gy - 3, 1, 2);
+      } else if (kind === 2) {
+        // debris: small dark parts hugging the slab edge
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = "rgba(16,24,40,0.85)";
+        for (let d = 0; d < 3; d++) {
+          const dx = hash01(i * 9 + d * 3) * 14, dw = 1.5 + hash01(i * 13 + d) * 2.5;
+          ctx.fillRect(sx + dx, gy - dw + 1, dw, dw);
+        }
+      } else if (kind === 3) {
+        // coiled cable left on the floor
+        ctx.globalCompositeOperation = "source-over";
+        ctx.strokeStyle = "rgba(14,22,38,0.9)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.arc(sx, gy - 1, 3.2, 0.15 * Math.PI, 0.95 * Math.PI); ctx.stroke();
+        ctx.beginPath(); ctx.arc(sx + 1.5, gy - 1, 2.2, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+      } else if (kind === 4) {
+        // scrubbed patch — a lighter, cleaner island in the grime
+        ctx.globalCompositeOperation = "screen";
+        ctx.fillStyle = "rgba(120,140,175,0.14)";
+        ctx.beginPath();
+        ctx.ellipse(sx, gy - 1, 16 + hash01(i * 7) * 10, 3.2, 0, 0, TAU);
+        ctx.fill();
+      } else {
+        // drip run down the wall onto the floor
+        ctx.globalCompositeOperation = "multiply";
+        ctx.fillStyle = "rgba(28,30,34,0.45)";
+        ctx.fillRect(sx, CFG.GROUND_Y - 14 - hash01(i * 17) * 18, 1.6, 14 + hash01(i * 17) * 18);
+        ctx.beginPath(); ctx.ellipse(sx + 0.8, gy - 1, 3.5, 1.6, 0, 0, TAU); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  /** Hero set pieces: scale contrast. A buffer tank or boiler row that spans
+      half the room height makes everything around it read as a real plant. */
+  function drawHeroVessels(cam, S) {
+    if (!Game.lvl || Game.lvl.theme === "site") return;    // demo: plant + handover
+    const par = 0.7, off = cam * par, step = 780;
+    const start = Math.floor(off / step);
+    for (let i = start; i <= start + Math.ceil(CFG.W / step) + 1; i++) {
+      if (hash01(i * 41 + 5) < 0.2) continue;
+      const x = cam + i * step - off + 40;
+      const big = hash01(i * 13 + 9) > 0.5;
+      if (big) drawHeroTank(x, CFG.GROUND_Y, S, i);
+      else drawHeroBoilerRow(x, CFG.GROUND_Y, S, i);
+    }
+  }
+
+  function drawHeroTank(x, gy, S, i) {
+    const w = 46, h = 132, y = gy - h;
+    softShadow(x + w / 2, gy + 2, 30, 3.6, 0.36);
+    // riser up through the slab first (behind the vessel)
+    ctx.fillStyle = shade(S.near, -0.15);
+    ctx.fillRect(x + w / 2 - 4, 0, 8, y + 6);
+    ctx.fillStyle = S.nearHi;
+    ctx.fillRect(x + w / 2 - 5, y - 4, 10, 3);           // top flange
+    // vessel body: horizontal cylinder shading, brushed, rounded
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, shade(S.near, -0.12));
+    g.addColorStop(0.35, shade(S.nearHi, 0.26));
+    g.addColorStop(0.55, S.nearHi);
+    g.addColorStop(1, shade(S.near, -0.28));
+    rrectPath(x, y, w, h, 7);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + w / 2, y + 2, w / 2, 8, 0, Math.PI, TAU); ctx.fill();
+    grime(x, y, w, h, TEX.metal, 0.22, "multiply", 64);
+    // access ladder
+    ctx.strokeStyle = "rgba(190,205,225,0.44)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x + w - 8, y + 10); ctx.lineTo(x + w - 8, gy - 4); ctx.stroke();
+    for (let ly = y + 12; ly < gy - 6; ly += 9) {
+      ctx.beginPath(); ctx.moveTo(x + w - 11, ly); ctx.lineTo(x + w - 5, ly); ctx.stroke();
+    }
+    // manhole + level gauge + pilot light
+    ctx.fillStyle = shade(S.near, -0.3);
+    ctx.beginPath(); ctx.arc(x + w / 2, y + h * 0.42, 7, 0, TAU); ctx.fill();
+    ctx.strokeStyle = "rgba(190,205,225,0.3)"; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.arc(x + w / 2, y + h * 0.42, 7, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = "rgba(125,235,250,0.5)";
+    ctx.beginPath(); ctx.moveTo(x + 6, y + h * 0.25); ctx.lineTo(x + 6, y + h * 0.75); ctx.stroke();
+    for (let ly = 0; ly < 4; ly++) {
+      ctx.fillStyle = (hash01(i * 3 + ly) > 0.4) ? "rgba(125,235,250,0.6)" : "rgba(60,80,110,0.6)";
+      ctx.fillRect(x + 4.5, y + h * 0.3 + ly * (h * 0.1), 3, 2);
+    }
+    led(x + w - 6, y + h * 0.2, PAL.green, "52,211,153", true);
+    addLight(x + w / 2, y + h * 0.35, 46, S.lampRGB || "190,205,225", 0.12);
+  }
+
+  function drawHeroBoilerRow(x, gy, S, i) {
+    softShadow(x + 40, gy + 2, 44, 3.4, 0.34);
+    const h = 104;
+    for (let b = 0; b < 3; b++) {
+      const bx = x + b * 30, w = 24, y = gy - h;
+      const g = ctx.createLinearGradient(bx, 0, bx + w, 0);
+      g.addColorStop(0, shade(S.near, -0.1));
+      g.addColorStop(0.4, shade(S.nearHi, 0.2));
+      g.addColorStop(1, shade(S.near, -0.26));
+      rrectPath(bx, y, w, h, 6);
+      ctx.fillStyle = g; ctx.fill();
+      grime(bx, y, w, h, TEX.metal, 0.20, "multiply", 64);
+      ctx.fillStyle = shade(S.nearHi, -0.35);            // burner band at the base
+      ctx.fillRect(bx + 2, gy - 8, w - 4, 4);
+      ctx.fillStyle = "rgba(255,150,60,0.7)";            // burner pilot
+      if ((Game.frame >> 5 + b) % 3 !== 0) {
+        ctx.beginPath(); ctx.arc(bx + w / 2, gy - 5.5, 0.9, 0, TAU); ctx.fill();
+      }
+      // header pipe across the tops
+      ctx.fillStyle = S.near;
+      if (b < 2) ctx.fillRect(bx + w - 3, y + 4, 9, 3.4);
+    }
+    ctx.fillStyle = S.near;
+    ctx.fillRect(x - 6, gy - h + 3, 80, 4);              // collection header
+    ctx.fillStyle = S.nearHi;
+    ctx.fillRect(x - 7, gy - h + 2, 82, 1.2);
+    addLight(x + 40, gy - h * 0.5, 40, "255,150,60", 0.10);
   }
 
   function drawParticles() {
@@ -3776,9 +4087,17 @@
         <p class="at-dim">${esc(CAT_LABELS[ex.kind] || "")}</p>
         <p>${esc(ex.q.why)}</p>
         ${ex.ok ? "" : `<p class="at-red">Richtig wäre: ${esc(ex.q.opts[ex.q.correct])}</p>`}
-        <p class="at-dim at-tiny">[ SPACE ] weiter</p>
+        <p class="at-dim at-tiny">[ SPACE / KLICK ] weiter</p>
       </div>
     `, "at-panel--explain");
+    // Mouse/touch players have no SPACE — a click on the explain card must
+    // count as "read it, continue". The listener goes on the freshly created
+    // card, never on the panel container: the click that ANSWERS the task
+    // bubbles through the old DOM path and would otherwise dismiss the
+    // explain it just opened (path is fixed at dispatch, innerHTML swap
+    // comes too late to stop it).
+    const card = panel.querySelector(".at-explain");
+    if (card) card.addEventListener("click", () => { if (Game.state === "explain") afterExplain(); });
   }
 
   function renderLevelDonePanel(bonus, left) {
