@@ -1602,6 +1602,7 @@
     drawBackground();
     drawPlats();
     drawFloorMarks();      // painted markings belong ON the slab, not behind it
+    drawAmbientDust();
     drawPickups();
     drawAssets();
     drawBlockers();
@@ -2117,6 +2118,32 @@
     ctx.fillRect(cam, 0, CFG.W, CFG.H);
   }
 
+  /** Depth of field: far scenery planes render defocused. Canvas filters are
+      expensive, so this stays on the rearmost plane only, degrades silently to
+      no blur where ctx.filter is unsupported — and switches itself off for the
+      session when the frame rate dips (see the guard in frame()). */
+  let CAN_BLUR = HD && typeof ctx.filter === "string";
+  function focusDepth(px) {
+    if (!CAN_BLUR) return;
+    ctx.filter = "blur(" + (px * VIEW.s).toFixed(2) + "px)";
+  }
+  function focusSharp() {
+    if (!CAN_BLUR) return;
+    ctx.filter = "none";
+  }
+  // Rolling frame-time guard: sustained <42 fps turns the depth blur off.
+  let perfN = 0, perfT = 0;
+  function perfGuard(now) {
+    if (!CAN_BLUR) return;
+    perfN++;
+    if (!perfT) { perfT = now; return; }
+    if (now - perfT >= 2000) {
+      const fps = perfN / ((now - perfT) / 1000);
+      perfN = 0; perfT = now;
+      if (fps < 42) { CAN_BLUR = false; ctx.filter = "none"; }
+    }
+  }
+
   function drawBackground() {
     const cam = Game.cam.x;
     const S = SCN[Game.lvl.theme] || SCN.plant;
@@ -2130,14 +2157,19 @@
     hg.addColorStop(1, S.horizon);
     ctx.fillStyle = hg; ctx.fillRect(cam, 90, CFG.W, CFG.GROUND_Y - 90);
 
-    // L1: structural shell, L2/L3: same shell but darker and further away
+    // L1: structural shell, L2/L3: same shell but darker and further away.
+    // Both rearmost planes render defocused — the depth-of-field read.
+    focusDepth(1.3);
     drawShell(cam, S);
     if (S.openings) drawOpenings(cam, S);
+    focusSharp();
 
     // depth fog pushes the shell behind the services
     depthFog(cam, S, 0.30);
 
-    // --- services layer (0.42) ---
+    // --- services layer (0.42): drawn sharp — filtering both rearmost planes
+    // cost ~25 fps in the embedded test browser, the shell blur alone carries
+    // the depth read and keeps the frame budget. ---
     propLayer(cam, 0.42, 138, CFG.GROUND_Y, S.midProps, 11, S);
     if (S.trays > 0) drawTray(cam, 0.42, 40, S);
     if (S.ducts) drawPipeRun(cam, 0.42, 60, S, 3);
@@ -2621,13 +2653,39 @@
     }
   }
 
+  /** Drifting motes in the room air — the cheap trick that sells volumetric
+      light and scale. Deterministic, world-space, wraps over the level. */
+  function drawAmbientDust() {
+    const span = Game.lvl.w || CFG.W;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 18; i++) {
+      const drift = Game.frame * (0.05 + hash01(i * 7) * 0.09);
+      const sx = (hash01(i * 13) * span + drift) % span;
+      const sy = 22 + hash01(i * 29) * (CFG.GROUND_Y - 44) + Math.sin(Game.frame * 0.012 + i * 2.3) * 5;
+      const a = 0.035 + hash01(i * 3) * 0.05;
+      ctx.fillStyle = "rgba(190,215,255," + a.toFixed(3) + ")";
+      ctx.beginPath();
+      ctx.arc(sx, sy, 0.6 + hash01(i * 11) * 0.8, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function drawParticles() {
+    ctx.save();
     for (const p of Game.particles) {
       ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
       ctx.fillStyle = p.c;
-      ctx.fillRect(p.x | 0, p.y | 0, p.size, p.size);
+      if (HD) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.6, p.size * 0.7), 0, TAU);
+        ctx.fill();
+      } else {
+        ctx.fillRect(p.x | 0, p.y | 0, p.size, p.size);
+      }
     }
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   function drawFloaters() {
@@ -3815,6 +3873,7 @@
     accTime += dt;
     let guard = 0;
     while (accTime >= STEP && guard++ < 8) { tick(); accTime -= STEP; }
+    perfGuard(now);
     draw();
     updateHUD();
     Input.clearEdges();
