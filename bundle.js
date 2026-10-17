@@ -38,10 +38,10 @@
      1. CONFIG & PALETTE
   --------------------------------------------------------------------------- */
   const CFG = {
-    // Logic space stays 480x270 (physics, level data, hitboxes are untouched);
-    // the canvas renders at SCALE=2 so edges, glows and gradients get a finer
-    // grid — the difference between 8-bit chunk and late-90s pixel art.
-    W: 480, H: 270, SCALE: 2,
+    // Logic space: physics, level data and hitboxes all live in 480x270 units.
+    // The canvas renders this at native device resolution (see fitCanvas), so
+    // every gradient, glow and curve gets a full-resolution grid in HD mode.
+    W: 480, H: 270,
     GROUND_Y: 246,
 
     // physics
@@ -1463,14 +1463,32 @@
      16. RENDERING
   --------------------------------------------------------------------------- */
   const cv = document.getElementById("at-canvas");
-  cv.width = CFG.W * CFG.SCALE;
-  cv.height = CFG.H * CFG.SCALE;
   const ctx = cv.getContext("2d");
-  ctx.imageSmoothingEnabled = false;
 
-  /** All drawing happens in 480x270 logic units on a SCALE-times larger backing
-      store. Called at the top of every frame path (render + backdrops). */
-  function beginFrame() { ctx.setTransform(CFG.SCALE, 0, 0, CFG.SCALE, 0, 0); }
+  /* --- render pipeline: smooth HD by default, ?retro=1 restores the pixel era.
+         Logic space stays 480x270 in both modes; only the backing store and the
+         scale transform differ. ------------------------------------------------ */
+  const RETRO = /[?&]retro=1(?:&|$)/.test(location.search);
+  const HD = !RETRO;
+  const VIEW = { s: 2 };
+  function fitCanvas() {
+    if (RETRO) { cv.width = 960; cv.height = 540; VIEW.s = 2; return; }
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const r = cv.getBoundingClientRect();
+    const w = Math.max(320, Math.round((r.width || 960) * dpr));
+    const h = Math.max(180, Math.round((r.height || 540) * dpr));
+    cv.width = w; cv.height = h;
+    VIEW.s = w / CFG.W;
+  }
+  if (HD && window.ResizeObserver) new ResizeObserver(fitCanvas).observe(cv);
+  else if (HD) window.addEventListener("resize", fitCanvas);
+  fitCanvas();
+  if (RETRO) ctx.imageSmoothingEnabled = false;
+  document.body.classList.toggle("at-retro", RETRO);
+
+  /** All drawing happens in 480x270 logic units; the transform scales the
+      backing store. Called at the top of every frame path (render + backdrops). */
+  function beginFrame() { ctx.setTransform(VIEW.s, 0, 0, VIEW.s, 0, 0); }
 
   /** Additive radial glow — the "colored light" look the late 90s loved.
       rgb is a bare "r,g,b" triple so the alpha stops can vary. */
@@ -2714,7 +2732,35 @@
   })();
   const UML = { "Ä": "A", "Ö": "O", "Ü": "U" };
 
-  const pxWidth = t => String(t).length * FADV - 1;
+  /* --- HD text renderer -------------------------------------------------------
+     Smooth system-font text with a soft shadow instead of a pixel outline.
+     Same baseline semantics as the bitmap font (y = baseline of a 7px glyph
+     box), so call sites keep their vertical offsets in both modes.            */
+  const FONT_HD = '600 8px "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif';
+
+  function text(t, x, y, color, opts) {
+    const o = opts || {};
+    ctx.save();
+    ctx.font = FONT_HD;
+    ctx.textAlign = o.center ? "center" : "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = color || PAL.white;
+    if (o.outline) { ctx.shadowColor = "rgba(4,7,13,0.92)"; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1; }
+    else if (!o.plain) { ctx.shadowColor = "rgba(4,7,13,0.60)"; ctx.shadowBlur = 2; ctx.shadowOffsetY = 1; }
+    ctx.fillText(String(t), x, y - 1);
+    ctx.restore();
+  }
+
+  function pxWidth(t) {
+    if (HD) {
+      ctx.save();
+      ctx.font = FONT_HD;
+      const w = ctx.measureText(String(t).toUpperCase()).width;
+      ctx.restore();
+      return w;
+    }
+    return String(t).length * FADV - 1;
+  }
 
   function pxGlyph(ch, x, top) {
     const g = GLYPHS[ch];
@@ -2742,13 +2788,16 @@
   }
 
   /**
-   * Draw pixel text. `y` is the BASELINE (the glyph box sits at y-FH … y-1), so
-   * call sites written against the old fillText API keep their vertical offsets.
+   * The text gate: HD delegates to the smooth renderer, ?retro=1 draws the
+   * hand-set bitmap font exactly as the game always did.
+   * `y` is the BASELINE (the glyph box sits at y-FH … y-1), so call sites
+   * written against the old fillText API keep their vertical offsets.
    * opts: {center, outline, plain}
    */
-  function pxText(text, x, y, color, opts) {
+  function pxText(t, x, y, color, opts) {
+    if (HD) { text(t, x, y, color, opts); return; }
     const o = opts || {};
-    const s = String(text).toUpperCase();
+    const s = String(t).toUpperCase();
     const sx = Math.round(o.center ? x - pxWidth(s) / 2 : x);
     const top = Math.round(y) - FH;
     if (o.outline) {
@@ -2762,6 +2811,12 @@
     }
     ctx.fillStyle = color || PAL.white;
     pxRun(s, sx, top);
+  }
+
+  /** Data-rain glyph: smooth digit in HD, bitmap digit in retro. */
+  function rainGlyph(ch, x, y, c) {
+    if (HD) { text(ch, x, y + FH, c, { plain: true }); return; }
+    ctx.fillStyle = c; pxGlyph(ch, x, y);
   }
 
   const tinyText = (t, x, y, c) => pxText(t, x, y, c);
@@ -2785,9 +2840,9 @@
       const x = 10 + i * 35 + hash01(i * 5) * 12;
       const speed = 0.35 + hash01(i * 3) * 0.7;
       const y = ((Game.frame * speed + i * 53) % (CFG.H + 40)) - 20;
-      ctx.fillStyle = i % 3 === 0 ? "rgba(52,211,153,0.18)" : "rgba(34,211,238,0.12)";
+      const c = i % 3 === 0 ? "rgba(52,211,153,0.18)" : "rgba(34,211,238,0.12)";
       for (let j = 0; j < 4; j++)
-        pxGlyph(String((i * 5 + j * 3 + (Game.frame >> 4)) % 10), x | 0, (y - j * 9) | 0);
+        rainGlyph(String((i * 5 + j * 3 + (Game.frame >> 4)) % 10), x | 0, (y - j * 9) | 0, c);
     }
 
     // horizon light
@@ -2850,9 +2905,9 @@
       const x = i * 19 + 4;
       const speed = 1 + (i % 5) * 0.5;
       const y = ((Game.frame * speed + i * 47) % (CFG.H + 60)) - 30;
-      ctx.fillStyle = i % 4 === 0 ? "rgba(52,211,153,0.55)" : "rgba(34,211,238,0.28)";
+      const c = i % 4 === 0 ? "rgba(52,211,153,0.55)" : "rgba(34,211,238,0.28)";
       for (let j = 0; j < 5; j++) {
-        pxGlyph(String((i * 7 + j * 3 + (Game.frame >> 3)) % 10), x, (y - j * 10) | 0);
+        rainGlyph(String((i * 7 + j * 3 + (Game.frame >> 3)) % 10), x, (y - j * 10) | 0, c);
       }
     }
     ctx.fillStyle = "rgba(255,107,0,0.10)";

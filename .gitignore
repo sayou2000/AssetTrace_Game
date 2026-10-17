@@ -18,3 +18,4 @@ tmp/
 # Es gibt bewusst keinen Build-Schritt und keine Abhängigkeiten.
 node_modules/
 npm-debug.log*
+.zcode/
