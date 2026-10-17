@@ -1,15 +1,34 @@
-# AssetTrace: The Handover Quest 🕹️  v2.0
+# AssetTrace: The Handover Quest 🕹️  v3.0
 
-Ein **Retro-Arcade-Spiel** im Browser — Pixel-Look, Chrome und Trance-Sound der späten 90er. Es macht den realen
-**Handover Gap** im Facility Management spielbar: der Spieler ist Tech Inspector,
-erfasst Anlagen gegen einen laufenden Übergabetermin und verwandelt visuelle
-Daten in strukturierte, CAFM-fähige FM-Daten.
+Ein **Arcade-Spiel** im Browser mit **High-End-Vektorgrafik**: weiche Verläufe,
+Tiefenschärfe, Bloom und Ambient-Licht — alles prozedural, zur Laufzeit erzeugt.
+Es macht den realen **Handover Gap** im Facility Management spielbar: der
+Spieler ist Tech Inspector, erfasst Anlagen gegen einen laufenden Übergabetermin
+und verwandelt visuelle Daten in strukturierte, CAFM-fähige FM-Daten.
 
 - **Pure HTML5 Canvas + Vanilla JS + Web Audio API.** Kein Framework, kein Build-Schritt.
-- **Keine externen Assets** — Pixelgrafik und Chiptune werden zur Laufzeit erzeugt.
-- **~130 KB gesamt.** Lädt sofort, läuft offline, überall einbettbar.
+- **Keine externen Assets** — Grafik, Licht und Musik werden zur Laufzeit erzeugt.
+- **~140 KB gesamt.** Lädt sofort, läuft offline, überall einbettbar.
 - **Desktop + Mobile** (Touch-Steuerung wird automatisch erkannt).
 - **Einbettbar** per `<iframe>` oder `<assettrace-game>` Web Component in jedes CMS.
+- **`?retro=1`** schaltet auf den Pixel-/CRT-Look früherer Versionen um
+  (Arcade-Gag für Messen und Nostalgie).
+
+## Was v3.0 gegenüber v2.x ändert
+
+v2.x war Pixel-Art. v3.0 ersetzt den kompletten Render-Layer durch eine
+HD-Vektorpipeline — Gameplay, Physik und Inhalte sind unverändert:
+
+| | v2.x | v3.0 |
+|---|---|---|
+| Auflösung | 480×270-Buffer, `pixelated`-Upscale | Native Display-Auflösung (DPR, Deckel 2) |
+| Sprites | handgesetzte Pixel | Vektorformen: Metallverläufe, Rundungen, LEDs mit Eigenlicht |
+| Spieler | 12×16-Pixel-Sprite | Kapselfigur mit Laufzyklus, Squash & Stretch, Motion-Trail, Visor-Bloom |
+| Text im Canvas | 5×7-Bitmap-Font | Anti-Aliased System-Font mit weichem Schatten |
+| Tiefe | Fog + Grading | + echte Tiefenschärfe (hinterste Ebene defokussiert) + Ambient-Staub |
+| Partikel | 1px-Quadrate | weiche additive Kreise |
+| Retro-Modus | — | `?retro=1` stellt den v2-Look wieder her |
+| Audio | Chiptune (v2.0–2.1) | Trance-Loop mit Supersaw + Hall (seit v2.2) |
 
 ## Was v2.0 gegenüber v1 ändert
 
@@ -405,32 +424,25 @@ Wandöffnungen mit Außengerüst, Kabeltrommeln, Paletten), `plant` (dichte
 Installation, kühl, Notbeleuchtung), `handover` (in Betrieb, wärmer, plus
 Aktenordner-Stapel — das Papier, das das Produkt ersetzen soll).
 
-### Schrift: Bitmap-Font im Canvas, Monospace im DOM
+### Schrift: eine Weiche, zwei Renderer
 
-Die Beschriftungen im Spielfeld waren zunächst mit `ctx.fillText` in 8px Courier
-gezeichnet. Das war der Fehler: der Browser glättet kleine Schrift zu grauen
-Halbpixeln, und `image-rendering: pixelated` vergrößert diese Unschärfe dann auf
-das Doppelte. Ergebnis war Matsch — genau bei der Statuszeile, die das ganze
-Feedback-System trägt.
+Die Beschriftungen im Spielfeld haben eine Geschichte: v1 nutzte `ctx.fillText`
+in 8px Courier — der Browser glättet kleine Schrift zu grauen Halbpixeln, und
+mit `image-rendering: pixelated` wurde daraus Matsch. v2 antwortete mit einem
+**handgesetzten 5×7-Bitmap-Font** (`pxText()`/`GLYPHS`). v3.0 dreht es zurück,
+aber richtig: der Canvas rendert nativ in Display-Auflösung, also ist
+Anti-Aliasing jetzt kein Bug, sondern der Look.
 
-Jetzt zeichnet `pxText()` einen **handgesetzten 5×7-Bitmap-Font** Pixel für Pixel
-(`GLYPHS` in Section 16). Kein Antialiasing, also scharf bei jedem Skalierungsfaktor
-— und das ist ohnehin die Technik, die die Vorbilder benutzt haben.
+- `pxText()` ist die zentrale Weiche: im HD-Modus delegiert es an `text()`
+  (Anti-Aliased System-Font mit weichem Schatten statt Pixel-Kontur), mit
+  `?retro=1` zeichnet es exakt den Bitmap-Font von v2.
+- Gleiche Baseline-Semantik wie immer (`y` = Grundlinie der 7px-Box) — keine
+  Aufrufstelle musste angefasst werden.
+- `pxWidth()` misst im HD-Modus per `measureText`, im Retro-Modus `len*6-1`.
+- Der Bitmap-Font bleibt außerdem für den Datenregen (Titel/Boss) erhalten.
 
-- Nur Großbuchstaben. Deutsches `ß` wird von `toUpperCase()` automatisch zu `SS`,
-  Umlaute werden als Basisglyphe + zwei Punkte darüber gezeichnet (`UML`).
-- `pxText(text, x, baselineY, color, {center, outline, plain})`. `outline` zeichnet
-  eine 4-fache schwarze Kontur — nötig für Floater und Anzeigen, die über beliebiger
-  Kulisse liegen.
-- Horizontale Pixelläufe werden zu einem `fillRect` zusammengefasst, damit die
-  Zeichenlast niedrig bleibt.
-- Breite messen mit `pxWidth(t)` (= `len*6-1`), nicht mit `measureText`.
-
-Die **DOM-Panels** sind der umgekehrte Fall: dort ist Lesbarkeit wichtiger als
-Pixel-Look, weil dort die Fachinhalte stehen. Deshalb `Consolas / DejaVu Sans Mono /
-Menlo` statt Courier New, `-webkit-font-smoothing: antialiased` statt `none`,
-hellere Sekundärfarbe (`--at-dim`) und durchgehend eine Stufe größere Schriftgrade.
-Der Retro-Charakter kommt vom Canvas, nicht von unleserlichen Panels.
+Die **DOM-Panels** bleiben wie gehabt auf Lesbarkeit getrimmt (Monospace-Stack,
+`antialiased`, hellere Sekundärfarbe).
 
 Langer Report: `.at-panel--report` ist eine Flex-Spalte aus scrollendem
 `.at-rep-body` und fixierter `.at-rep-foot`. Ohne das rutschen „weiter" und der
@@ -460,10 +472,14 @@ schiefgegangen und wurden per Rechnung gefunden, nicht per Auge:
 Damit lässt sich jede Szene direkt anspringen (z. B. für Screenshots) oder eine
 Ebene ohne Vorlauf starten.
 
-The internal render resolution is **480×270** and CSS upscales it with
-`image-rendering: pixelated`, which is what produces the authentic crunchy 8-bit
-look on any display. The CRT scanline + vignette overlay is a pure-CSS layer
-(`#at-crt-overlay`).
+The internal logic resolution is **480×270**; in HD the canvas backing store runs
+at native display resolution (devicePixelRatio, capped at 2) and the frame opens
+with a scale transform — every gradient, glow and curve renders pixel-perfect.
+The rearmost scenery plane is defocused via `ctx.filter: blur` for real depth of
+field; a rolling frame-time guard turns the blur off by itself if the frame rate
+sustains below ~42 fps. With `?retro=1` the backing store drops back to 960×540
+with `image-rendering: pixelated` and the CRT scanline overlay
+(`#at-crt-overlay`) returns.
 
 ---
 
