@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1
-# AssetIdent: The Handover Quest — static-site container
+# AssetTrace: The Handover Quest — static-site container
 # Tiny nginx:alpine serves the prebuilt files; there is no build step.
 # Image ~10 MB, game bundle ~180 KB.
 
 FROM nginx:1.27-alpine
 
-LABEL org.opencontainers.image.title="AssetIdent: The Handover Quest"
+LABEL org.opencontainers.image.title="AssetTrace: The Handover Quest"
 LABEL org.opencontainers.image.description="80s retro arcade marketing game about the FM handover gap"
-LABEL org.opencontainers.image.version="2.0.1"
+LABEL org.opencontainers.image.version="2.1.0"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Static site files. og-image.png is the share card for LinkedIn/Slack previews.

@@ -1,4 +1,4 @@
-# AssetIdent: The Handover Quest — Docker build context filter
+# AssetTrace: The Handover Quest — Docker build context filter
 # Keep the image lean: only the static site + server config get copied.
 
 # VCS
