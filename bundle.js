@@ -1519,6 +1519,69 @@
     ctx.fillRect(x, y, w, 1);
   }
 
+  /* --- HD shape kit: smooth forms for the 3.0 re-skin ------------------------
+     rrectPath/metalBody/screw/led/softShadow are the primitives the HD sprites
+     are built from. Everything stays procedural — no images, no libraries. */
+  const TAU = Math.PI * 2;
+
+  /** #rrggbb → lightened (f>0) or darkened (f<0) rgb() string. */
+  function shade(hex, f) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    const t = f < 0 ? 0 : 255, a = Math.abs(f);
+    return "rgb(" + Math.round(r + (t - r) * a) + "," +
+      Math.round(g + (t - g) * a) + "," + Math.round(b + (t - b) * a) + ")";
+  }
+
+  function rrectPath(x, y, w, h, r) {
+    const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  /** Brushed-metal body: vertical gradient, hot top rim, dark base. */
+  function metalBody(x, y, w, h, base, r) {
+    const rr = r === undefined ? 2 : r;
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, shade(base, 0.38));
+    g.addColorStop(0.26, shade(base, 0.10));
+    g.addColorStop(0.72, base);
+    g.addColorStop(1, shade(base, -0.32));
+    rrectPath(x, y, w, h, rr);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = "rgba(226,232,240,0.22)";
+    ctx.lineWidth = 0.7;
+    rrectPath(x + 0.4, y + 0.4, w - 0.8, h - 0.8, Math.max(0.5, rr - 0.5));
+    ctx.stroke();
+  }
+
+  function screw(cx, cy, r) {
+    ctx.fillStyle = "rgba(10,16,28,0.85)";
+    ctx.beginPath(); ctx.arc(cx, cy, r || 1, 0, TAU); ctx.fill();
+    ctx.fillStyle = "rgba(190,205,225,0.8)";
+    ctx.fillRect(cx - 0.8, cy - 0.25, 1.6, 0.5);
+  }
+
+  /** Status LED with its own little bloom. rgb = "r,g,b" for the glow. */
+  function led(x, y, color, rgb, blink) {
+    const on = !blink || (Game.frame >> 4) % 2 === 0;
+    if (on) glow(x, y, 4, rgb, 0.30);
+    ctx.fillStyle = on ? color : "rgba(100,116,139,0.7)";
+    ctx.beginPath(); ctx.arc(x, y, 1.1, 0, TAU); ctx.fill();
+  }
+
+  function softShadow(x, y, rx, ry, a) {
+    ctx.save();
+    ctx.fillStyle = "rgba(3,6,12," + a + ")";
+    ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
   function render() {
     const p = Game.player;
     const targetCam = clamp(p.x + p.w / 2 - CFG.W / 2, 0, Game.lvl.w - CFG.W);
@@ -2238,7 +2301,157 @@
     }
   }
 
+  /* --- HD asset sprites --------------------------------------------------------
+     Each type keeps its pixel twin's bounding box and readability: a scannable
+     unit must stay recognizable as foreground at a glance. */
+  function drawAssetHD(a) {
+    const { x, y, w, h } = a;
+    switch (a.type) {
+      case "boiler": {
+        metalBody(x, y, w, h, "#42506e", 3);
+        // inspection door with hinge + handle
+        ctx.fillStyle = "#1f2b42";
+        ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, Math.min(w, h) * 0.30, 0, TAU); ctx.fill();
+        ctx.strokeStyle = "rgba(190,205,225,0.35)"; ctx.lineWidth = 0.7;
+        ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, Math.min(w, h) * 0.30, 0, TAU); ctx.stroke();
+        ctx.fillStyle = PAL.cyan;
+        ctx.beginPath(); ctx.arc(x + w / 2 + 2, y + h / 2, 0.9, 0, TAU); ctx.fill();
+        led(x + 4, y + 3.5, PAL.green, "52,211,153", true);
+        screw(x + 2, y + 2); screw(x + w - 2, y + 2); screw(x + 2, y + h - 2); screw(x + w - 2, y + h - 2);
+        break;
+      }
+      case "pump": {
+        // motor block + volute in front
+        metalBody(x, y, w * 0.62, h, "#3d4a66", 2);
+        ctx.fillStyle = "#31405e";
+        ctx.beginPath(); ctx.arc(x + w * 0.76, y + h * 0.42, 4.6, 0, TAU); ctx.fill();
+        ctx.strokeStyle = "rgba(190,205,225,0.3)"; ctx.lineWidth = 0.7;
+        ctx.beginPath(); ctx.arc(x + w * 0.76, y + h * 0.42, 4.6, 0, TAU); ctx.stroke();
+        // corrosion blooms — soft, blotchy, the reason this unit is a "MANGEL" candidate
+        ctx.fillStyle = "rgba(122,59,18,0.5)";
+        ctx.beginPath(); ctx.ellipse(x + 3, y + h - 4, 2.6, 1.6, 0.3, 0, TAU); ctx.fill();
+        ctx.fillStyle = "rgba(150,80,30,0.35)";
+        ctx.beginPath(); ctx.ellipse(x + w * 0.4, y + 3, 3, 1.4, -0.2, 0, TAU); ctx.fill();
+        led(x + 2.5, y + 2.5, PAL.orange, "255,150,50", true);
+        break;
+      }
+      case "cabinet": {
+        metalBody(x, y, w, h, "#33415c", 2);
+        ctx.strokeStyle = "rgba(10,16,28,0.6)"; ctx.lineWidth = 0.7;
+        ctx.beginPath(); ctx.moveTo(x + w / 2, y + 2); ctx.lineTo(x + w / 2, y + h - 8); ctx.stroke();
+        // ventilation slots
+        ctx.strokeStyle = "rgba(190,205,225,0.22)";
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath(); ctx.moveTo(x + 3, y + 5 + i * 2.2); ctx.lineTo(x + w / 2 - 2.5, y + 5 + i * 2.2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x + w / 2 + 2.5, y + 5 + i * 2.2); ctx.lineTo(x + w - 3, y + 5 + i * 2.2); ctx.stroke();
+        }
+        led(x + 4, y + h - 5, PAL.green, "52,211,153", true);
+        led(x + 7, y + h - 5, PAL.red, "239,68,68", false);
+        ctx.fillStyle = "rgba(226,232,240,0.6)";                  // door handle
+        rrectPath(x + w / 2 + 1.5, y + h * 0.5, 1.2, 3, 0.6); ctx.fill();
+        screw(x + 2, y + 2); screw(x + w - 2, y + h - 10);
+        break;
+      }
+      case "ahu": {
+        metalBody(x, y, w, h, "#42506e", 2);
+        // filter bank: soft horizontal stripes
+        for (let i = 0; i < 4; i++) {
+          ctx.fillStyle = i % 2 ? "rgba(15,23,42,0.55)" : "rgba(30,41,66,0.55)";
+          rrectPath(x + 3, y + 3.5 + i * (h - 14) / 3.4, w - 6, (h - 14) / 4.4, 1); ctx.fill();
+        }
+        // fan grille
+        ctx.fillStyle = "#101a2c";
+        ctx.beginPath(); ctx.arc(x + w / 2, y + h * 0.42, 3.4, 0, TAU); ctx.fill();
+        ctx.strokeStyle = "rgba(140,160,190,0.4)"; ctx.lineWidth = 0.6;
+        for (let i = 0; i < 3; i++) {
+          const ang = Game.frame * 0.15 + i * (TAU / 3);
+          ctx.beginPath(); ctx.moveTo(x + w / 2, y + h * 0.42);
+          ctx.lineTo(x + w / 2 + Math.cos(ang) * 2.8, y + h * 0.42 + Math.sin(ang) * 2.8); ctx.stroke();
+        }
+        led(x + w - 3.5, y + 3.5, PAL.orange, "255,150,50", true);
+        break;
+      }
+      case "valve": {
+        // riser + bonnet
+        metalBody(x + w / 2 - 2, y + h * 0.45, 4, h * 0.55, "#3d4a66", 1);
+        ctx.fillStyle = "#42506e";
+        rrectPath(x + w / 2 - 2.5, y + h * 0.3, 5, h * 0.2, 1); ctx.fill();
+        // handwheel, slowly turning
+        const wy = y + h * 0.22;
+        ctx.strokeStyle = "#6b82a8"; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(x + w / 2, wy, 5, 0, TAU); ctx.stroke();
+        ctx.lineWidth = 0.9;
+        for (let i = 0; i < 4; i++) {
+          const ang = Game.frame * 0.012 + i * (TAU / 4);
+          ctx.beginPath(); ctx.moveTo(x + w / 2, wy);
+          ctx.lineTo(x + w / 2 + Math.cos(ang) * 5, wy + Math.sin(ang) * 5); ctx.stroke();
+        }
+        glow(x + w / 2, wy, 8, "107,130,168", 0.08);
+        break;
+      }
+      case "transformer": {
+        metalBody(x, y, w, h, "#2e3a52", 2);
+        // cooling fins
+        for (let i = 0; i < 4; i++) {
+          ctx.fillStyle = "rgba(226,232,240,0.08)";
+          rrectPath(x + 2.5 + i * (w - 5) / 4, y + 4, (w - 5) / 6, h - 12, 0.8); ctx.fill();
+        }
+        // HV warning band
+        ctx.fillStyle = PAL.yellow;
+        rrectPath(x + 3, y + h - 8.5, w - 6, 2.6, 0.6); ctx.fill();
+        ctx.fillStyle = "rgba(17,24,39,0.85)";
+        for (let i = 0, s = x + 3.5; i < 4; i++, s += (w - 7) / 4) ctx.fillRect(s, y + h - 8.3, (w - 7) / 8, 2.2);
+        // terminals
+        ctx.fillStyle = "#9aa8c4";
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath(); ctx.arc(x + 4 + i * (w - 8) / 2, y + 2, 1, 0, TAU); ctx.fill();
+        }
+        break;
+      }
+      case "chiller": {
+        metalBody(x, y, w, h, "#42506e", 3);
+        ctx.fillStyle = "#101a2c";
+        ctx.beginPath(); ctx.arc(x + w / 2, y + h * 0.4, Math.min(w, h) * 0.26, 0, TAU); ctx.fill();
+        // three swept blades
+        ctx.strokeStyle = "rgba(125,235,250,0.75)"; ctx.lineWidth = 1.1; ctx.lineCap = "round";
+        for (let i = 0; i < 3; i++) {
+          const ang = Game.frame * 0.22 + i * (TAU / 3);
+          ctx.beginPath();
+          ctx.arc(x + w / 2 + Math.cos(ang) * Math.min(w, h) * 0.16, y + h * 0.4 + Math.sin(ang) * Math.min(w, h) * 0.16,
+            Math.min(w, h) * 0.11, ang, ang + 1.9);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = "rgba(140,160,190,0.4)"; ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.arc(x + w / 2, y + h * 0.4, Math.min(w, h) * 0.26, 0, TAU); ctx.stroke();
+        // refrigerant line
+        ctx.strokeStyle = PAL.cyan; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(x + 2, y + h - 4); ctx.lineTo(x + w - 2, y + h - 4); ctx.stroke();
+        led(x + w - 3.5, y + 3.5, PAL.green, "52,211,153", false);
+        break;
+      }
+      case "meterbox": {
+        metalBody(x, y, w, h, "#33415c", 2);
+        // glass display with soft digit rolls
+        rrectPath(x + 3, y + 3.5, w - 6, h * 0.5, 1.2);
+        ctx.fillStyle = "#0d1524"; ctx.fill();
+        ctx.strokeStyle = "rgba(140,160,190,0.35)"; ctx.lineWidth = 0.6;
+        rrectPath(x + 3, y + 3.5, w - 6, h * 0.5, 1.2); ctx.stroke();
+        const dw = (w - 9) / 5;
+        for (let i = 0; i < 5; i++) {
+          const isRed = i === 4;
+          rrectPath(x + 4.2 + i * dw, y + 5, dw - 0.8, h * 0.5 - 3, 0.7);
+          ctx.fillStyle = isRed ? "rgba(127,29,29,0.9)" : "rgba(226,232,240,0.85)"; ctx.fill();
+        }
+        // comm LED
+        led(x + 4, y + h - 4, PAL.cyan, "34,211,238", true);
+        break;
+      }
+    }
+    nameplate(a);
+  }
+
   function drawAssetByType(a) {
+    if (HD) { drawAssetHD(a); return; }
     const { x, y, w, h, type } = a;
     switch (type) {
       case "boiler":
@@ -2321,9 +2534,28 @@
     }
   }
 
-  // The nameplate itself: unreadable blocks until the focus scan resolves it.
+  // The nameplate itself: unreadable until the focus scan resolves it.
   function nameplate(a) {
     const px = a.x + 4, py = a.y + a.h - 12, pw = a.w - 8;
+    if (HD) {
+      // engraved plate: brushed metal, soft wobbling marks when out of focus
+      const g = ctx.createLinearGradient(0, py, 0, py + 7);
+      const base = a.captured ? "#155e6e" : "#7e8896";
+      g.addColorStop(0, shade(base, 0.30)); g.addColorStop(1, shade(base, -0.25));
+      rrectPath(px, py, pw, 7, 1);
+      ctx.fillStyle = g; ctx.fill();
+      ctx.strokeStyle = "rgba(15,23,42,0.5)"; ctx.lineWidth = 0.5;
+      rrectPath(px + 0.3, py + 0.3, pw - 0.6, 6.4, 0.8); ctx.stroke();
+      const sharp = a.captured ? 1 : (a.challenge === "focus" ? a.focus / 100 : 0.55);
+      for (let i = 0; i < 4; i++) {
+        const wob = sharp > 0.7 ? 0 : Math.sin(Game.frame * 0.35 + i * 1.7) * (1 - sharp) * 1.4;
+        ctx.fillStyle = sharp > 0.7 ? "rgba(13,21,36,0.85)" : "rgba(13,21,36," + (0.30 + sharp * 0.35) + ")";
+        rrectPath(px + 1.5 + i * (pw - 3) / 4 + wob, py + 2, (pw - 3) / 5.2, 3, 0.6);
+        ctx.fill();
+      }
+      screw(px + 1, py + 1, 0.6); screw(px + pw - 1, py + 6, 0.6);
+      return;
+    }
     ctx.fillStyle = a.captured ? PAL.cyanD : "#8a8f99";
     ctx.fillRect(px, py, pw, 7);
     const sharp = a.captured ? 1 : (a.challenge === "focus" ? a.focus / 100 : 0.55);
@@ -2340,6 +2572,20 @@
       const bob = Math.sin(Game.frame * 0.1) * 1.5;
       glow(pk.x + pk.w / 2, pk.y + pk.h / 2 + bob, pk.w + 16, "250,204,21",
         0.12 + 0.05 * Math.sin(Game.frame * 0.18));
+      if (HD) {
+        // glossy cell with a specular strip
+        metalBody(pk.x, pk.y + bob, pk.w, pk.h, "#3a465c", 1.5);
+        const gg = ctx.createLinearGradient(0, pk.y + bob + 2, 0, pk.y + bob + pk.h - 2);
+        gg.addColorStop(0, "#FFE066"); gg.addColorStop(1, "#D9A400");
+        rrectPath(pk.x + 2, pk.y + bob + 2, pk.w - 4, pk.h - 4, 1);
+        ctx.fillStyle = gg; ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.55)";
+        ctx.fillRect(pk.x + 2.5, pk.y + bob + 2.5, pk.w - 5, 0.9);
+        ctx.fillStyle = "#9aa8c4";
+        rrectPath(pk.x + pk.w / 2 - 1.8, pk.y + bob - 2, 3.6, 1.8, 0.6); ctx.fill();
+        tinyText("AKKU", pk.x - 5, pk.y + bob - 6, PAL.yellow);
+        continue;
+      }
       ctx.fillStyle = "rgba(250,204,21,0.14)";
       ctx.fillRect(pk.x - 4, pk.y + bob - 4, pk.w + 8, pk.h + 8);
       // battery cell
@@ -2402,6 +2648,106 @@
     ctx.globalAlpha = 1;
   }
 
+  /* --- HD player: smooth capsule figure with real run cycle -----------------
+     Same hitbox as the pixel sprite (12x16 logic units). The trail keeps a few
+     past positions so a sprint leaves fading ghosts behind. */
+  const trail = [];
+  function drawPlayerHD(p) {
+    const cx = p.x + p.w / 2, walking = p.onGround && Math.abs(p.vx) > 0.4;
+    const legPhase = walking ? Math.sin(p.animT) : 0;
+    const air = clamp(1 + p.vy * -0.014, 0.9, 1.1);          // stretch on rise
+    const squash = p.onGround && Math.abs(p.vx) < 0.4 ? 1 : clamp(1 - Math.abs(p.vx) * 0.008, 0.94, 1);
+
+    // motion trail — only while sprinting
+    trail.push({ x: p.x, y: p.y, f: p.facing, a: Math.abs(p.vx) > 2.6 ? 0.5 : 0 });
+    if (trail.length > 5) trail.shift();
+    for (let i = 0; i < trail.length - 1; i++) {
+      const t = trail[i];
+      if (t.a <= 0) continue;
+      ctx.save();
+      ctx.globalAlpha = t.a * (0.18 * (i + 1) / trail.length);
+      ctx.translate(t.x + p.w / 2, t.y);
+      ctx.scale(t.f, 1);
+      ctx.fillStyle = PAL.vestHi;
+      rrectPath(-3, 7, 7, 8, 3); ctx.fill();
+      ctx.beginPath(); ctx.arc(0.5, 4, 3.2, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+
+    // shadow: shrinks and fades with air time
+    const hFactor = p.onGround ? 1 : clamp(1 - (CFG.GROUND_Y - (p.y + p.h)) / 90, 0.45, 1);
+    softShadow(cx, CFG.GROUND_Y + 1.6, p.w * 0.52 * hFactor, 2.2 * hFactor, 0.40 * hFactor);
+
+    ctx.save();
+    ctx.translate(cx, p.y + p.h);
+    ctx.scale(p.facing, 1);
+    ctx.scale(2 - squash, air * squash);
+
+    // legs: round-cap strokes with a proper gait
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#22304a"; ctx.lineWidth = 2.4;
+    for (const side of [-1, 1]) {
+      const sw = walking ? legPhase * side : 0;
+      const hipX = side * 1.6;
+      ctx.beginPath();
+      ctx.moveTo(hipX, -6);
+      ctx.lineTo(hipX + sw * 2.6, -3 + Math.max(0, -sw) * 1.2);
+      ctx.lineTo(hipX + sw * 3.4, -0.4 + (walking ? Math.max(0, sw) * 1.4 : 0));
+      ctx.stroke();
+    }
+    // boots
+    ctx.fillStyle = PAL.orangeD;
+    for (const side of [-1, 1]) {
+      const sw = walking ? legPhase * side : 0;
+      rrectPath(side * 1.6 + sw * 3.4 - 1.8, -1.6, 3.8, 1.8, 0.9); ctx.fill();
+    }
+
+    // torso: hi-vis vest over a dark undersuit
+    const vg = ctx.createLinearGradient(0, -14, 0, -5);
+    vg.addColorStop(0, PAL.vestHi); vg.addColorStop(1, PAL.vest);
+    rrectPath(-4.5, -14, 9, 9.5, 3);
+    ctx.fillStyle = vg; ctx.fill();
+    ctx.fillStyle = "rgba(226,232,240,0.75)";               // reflective bands
+    ctx.fillRect(-4.5, -12.4, 9, 1);
+    ctx.fillRect(-4.5, -8.6, 9, 1);
+    // arms: back arm swings, front arm aims the scanner
+    ctx.strokeStyle = "#22304a"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-2.5, -12); ctx.lineTo(-4.6, -9.2 - legPhase * 1.5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(2.5, -12); ctx.lineTo(5.2, -10); ctx.stroke();
+    // hand scanner with backlit display
+    metalBody(4.6, -11.6, 4, 5, "#33415c", 1);
+    const scanHot = Input.held("scan");
+    rrectPath(5.3, -10.9, 2.6, 2.2, 0.6);
+    ctx.fillStyle = scanHot ? PAL.orange : PAL.cyan; ctx.fill();
+    glow(6.6, -9.8, 5, scanHot ? "255,150,50" : "34,211,238", 0.2);
+
+    // head: helmet sphere with gloss + glowing visor
+    const hg = ctx.createRadialGradient(-1, -18.2, 0.5, 0, -17, 4.4);
+    hg.addColorStop(0, PAL.orangeL); hg.addColorStop(1, PAL.orangeD);
+    ctx.beginPath(); ctx.arc(0, -17, 3.9, 0, TAU);
+    ctx.fillStyle = hg; ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.arc(0, -17, 3.4, Math.PI * 1.15, Math.PI * 1.55); ctx.stroke();
+    rrectPath(0.2, -18.4, 3.4, 2.3, 1.1);
+    ctx.fillStyle = "#0A1220"; ctx.fill();
+    rrectPath(0.7, -17.9, 2.4, 1.3, 0.6);
+    ctx.fillStyle = (Game.frame >> 3) % 2 ? "#7DEBFA" : PAL.cyan; ctx.fill();
+    glow(1.9, -17.2, 4.5, "34,211,238", 0.16);
+    // helmet lamp when the flashlight is carried
+    if (Game.hasFlash) {
+      ctx.fillStyle = lampActive() ? PAL.yellow : "#3a465c";
+      rrectPath(2.6, -20.4, 2.4, 1.6, 0.7); ctx.fill();
+      if (lampActive()) glow(3.8, -19.6, 5, "250,204,21", 0.2);
+    }
+
+    if (p.flash > 0) {
+      ctx.fillStyle = "rgba(255,255,255," + (p.flash / 14) * 0.4 + ")";
+      rrectPath(-7, -22, 14, 22, 4); ctx.fill();
+      p.flash--;
+    }
+    ctx.restore();
+  }
+
   function drawPlayer() {
     const p = Game.player;
     const cx = p.x | 0, cy = p.y | 0;
@@ -2411,6 +2757,8 @@
 
     // steam burn flicker
     if (p.hurt > 0 && (p.hurt >> 2) % 2 === 0) return;
+
+    if (HD) { drawPlayerHD(p); return; }
 
     // grounded contact shadow — an ellipse reads as "standing on the slab",
     // a flat bar reads as a sticker
