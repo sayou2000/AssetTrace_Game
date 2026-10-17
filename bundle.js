@@ -91,7 +91,7 @@
     BUILDING_ASSETS: 400,
     FIELDS_PER_RECORD: 8,
 
-    VERSION: "2.2.0",
+    VERSION: "2.2.1",
     HS_KEY: "at_handover_hs_v2",
   };
 
@@ -1486,6 +1486,21 @@
     ctx.restore();
   }
 
+  /** 16-bit shading pass over a sprite rect: light from above, shadow toward
+      the base, bright top rim. Turns flat single-color fills into lit objects
+      without touching the draw code of each individual sprite. */
+  function shadeSprite(x, y, w, h) {
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, "rgba(255,255,255,0.20)");
+    g.addColorStop(0.3, "rgba(255,255,255,0.05)");
+    g.addColorStop(0.55, "rgba(0,0,0,0.03)");
+    g.addColorStop(1, "rgba(0,0,0,0.26)");
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = "rgba(255,255,255,0.38)";
+    ctx.fillRect(x, y, w, 1);
+  }
+
   function render() {
     const p = Game.player;
     const targetCam = clamp(p.x + p.w / 2 - CFG.W / 2, 0, Game.lvl.w - CFG.W);
@@ -1555,7 +1570,7 @@
       ceil: "#131f36", ceilHi: "#1c2d4a",
       lamp: "rgba(255,236,190,", lampRGB: "255,236,190",
       haze: "rgba(255,205,140,0.05)",
-      fog: "140,185,240", horizon: "rgba(180,215,255,0.10)",
+      fog: "140,185,240", horizon: "rgba(180,215,255,0.10)", grade: "rgba(255,208,130,0.14)",
       wallProps: ["scaffold", "cableDrum", "pallets", "doorSteel", "signPlate", "extinguisher"],
       midProps: ["ductBox", "pipeColumn", "scaffold", "conduits", "pallets"],
       nearProps: ["ahuBox", "cabinetRow", "stairFlight", "tank"],
@@ -1569,7 +1584,7 @@
       ceil: "#0c1728", ceilHi: "#16253c",
       lamp: "rgba(214,240,255,", lampRGB: "214,240,255",
       haze: "rgba(120,200,255,0.04)",
-      fog: "90,170,230", horizon: "rgba(90,200,255,0.08)",
+      fog: "90,170,230", horizon: "rgba(90,200,255,0.08)", grade: "rgba(110,190,255,0.13)",
       wallProps: ["hydrant", "extinguisher", "exitSign", "doorSteel", "signPlate", "radiator"],
       midProps: ["manifold", "pipeColumn", "ductBox", "pumpSet", "conduits", "vessel"],
       nearProps: ["cabinetRow", "tank", "ahuBox", "pumpSet", "stairFlight"],
@@ -1583,7 +1598,7 @@
       lamp: "rgba(255,225,180,", lampRGB: "255,225,180",
       ceil: "#0e1a2d", ceilHi: "#18273e",
       haze: "rgba(255,150,70,0.05)",
-      fog: "235,160,95", horizon: "rgba(255,150,70,0.10)",
+      fog: "235,160,95", horizon: "rgba(255,150,70,0.10)", grade: "rgba(255,140,70,0.15)",
       wallProps: ["exitSign", "hydrant", "fileBoxes", "signPlate", "doorSteel", "extinguisher"],
       midProps: ["manifold", "ductBox", "pipeColumn", "fileBoxes", "vessel", "pumpSet"],
       nearProps: ["cabinetRow", "ahuBox", "tank", "cabinetRow"],
@@ -1901,17 +1916,34 @@
       ctx.fillRect(wx + 20, wy, 2, h); ctx.fillRect(wx + 66, wy, 2, h);
       for (let by = wy + 16; by < wy + h; by += 24) ctx.fillRect(wx + 2, by, w - 4, 2);
       ctx.fillStyle = S.far; ctx.fillRect(wx - 3, wy - 3, w + 6, 3);       // lintel
-      // light spill into the room
+      // volumetric daylight: wide soft shaft + narrow hot core + dust motes
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
       const g = ctx.createLinearGradient(wx, wy, wx + 30, wy + h + 90);
-      g.addColorStop(0, "rgba(160,200,255,0.16)");
-      g.addColorStop(1, "rgba(160,200,255,0)");
+      g.addColorStop(0, "rgba(170,205,255,0.20)");
+      g.addColorStop(1, "rgba(170,205,255,0)");
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.moveTo(wx, wy); ctx.lineTo(wx + w, wy);
       ctx.lineTo(wx + w + 60, CFG.H); ctx.lineTo(wx - 30, CFG.H);
       ctx.closePath(); ctx.fill();
+      const g2 = ctx.createLinearGradient(wx, wy, wx + 14, wy + h + 70);
+      g2.addColorStop(0, "rgba(210,230,255,0.16)");
+      g2.addColorStop(1, "rgba(210,230,255,0)");
+      ctx.fillStyle = g2;
+      ctx.beginPath();
+      ctx.moveTo(wx + 12, wy); ctx.lineTo(wx + w - 18, wy);
+      ctx.lineTo(wx + w + 8, CFG.H); ctx.lineTo(wx - 4, CFG.H);
+      ctx.closePath(); ctx.fill();
+      // dust drifting through the shaft — the tell that this light is volumetric
+      for (let m = 0; m < 7; m++) {
+        const seed = hash01(i * 31 + m * 7);
+        const my = wy + ((Game.frame * (0.14 + seed * 0.12) + seed * 220) % (CFG.H - wy));
+        const mx = wx + (w * 0.5) + Math.sin(Game.frame * 0.02 + m * 2.1) * (w * 0.55);
+        const fall = 1 - (my - wy) / (CFG.H - wy);
+        ctx.fillStyle = "rgba(220,235,255," + (0.10 + seed * 0.16 + fall * 0.10).toFixed(3) + ")";
+        ctx.fillRect(mx, my, 1.5, 1.5);
+      }
       ctx.restore();
     }
   }
@@ -2022,19 +2054,19 @@
     if (S.openings) drawOpenings(cam, S);
 
     // depth fog pushes the shell behind the services
-    depthFog(cam, S, 0.13);
+    depthFog(cam, S, 0.30);
 
     // --- services layer (0.42) ---
     propLayer(cam, 0.42, 138, CFG.GROUND_Y, S.midProps, 11, S);
     if (S.trays > 0) drawTray(cam, 0.42, 40, S);
     if (S.ducts) drawPipeRun(cam, 0.42, 60, S, 3);
-    depthFog(cam, S, 0.08);
+    depthFog(cam, S, 0.18);
 
     // --- plant layer (0.7), the big silhouettes ---
     propLayer(cam, 0.7, 186, CFG.GROUND_Y, S.nearProps, 29, S);
     if (S.trays > 1) drawTray(cam, 0.7, 78, S);
     if (S.sprinkler) drawSprinkler(cam, 0.7, 96, S);
-    depthFog(cam, S, 0.04);
+    depthFog(cam, S, 0.09);
 
     // --- ceiling (0.62) ---
     drawCeilingLayer(cam, S);
@@ -2051,6 +2083,17 @@
     // vessel at floor level — can be mistaken for a scannable asset.
     ctx.fillStyle = "rgba(8,14,26,0.24)";
     ctx.fillRect(cam, 0, CFG.W, CFG.H);
+
+    // Per-level color grade on top of the scenery: warm daylight on site, cold
+    // cyan in the plant, sunset amber on handover day. The play layer (assets,
+    // player) stays ungraded, which pushes it visibly in front of the room.
+    if (S.grade) {
+      ctx.save();
+      ctx.globalCompositeOperation = "overlay";
+      ctx.fillStyle = S.grade;
+      ctx.fillRect(cam, 0, CFG.W, CFG.H);
+      ctx.restore();
+    }
   }
 
   function drawPlats() {
@@ -2131,6 +2174,13 @@
           0.14 + 0.05 * Math.sin(Game.frame * 0.25));
       }
       drawAssetByType(a);
+      shadeSprite(a.x, a.y, a.w, a.h);
+      // contact shadow on the slab — grounds the unit, separates it from the
+      // background scenery more honestly than an outline would
+      ctx.fillStyle = "rgba(3,6,12,0.38)";
+      ctx.beginPath();
+      ctx.ellipse(a.x + a.w / 2, a.y + a.h + 1.5, a.w * 0.55, 2.2, 0, 0, Math.PI * 2);
+      ctx.fill();
 
       if (a.captured) {
         ctx.fillStyle = "rgba(52,211,153,0.18)";
@@ -2339,16 +2389,26 @@
     const cx = p.x | 0, cy = p.y | 0;
     const walking = p.onGround && Math.abs(p.vx) > 0.4;
     const legPhase = walking ? Math.sin(p.animT) : 0;
+    const bob = p.onGround && !walking ? Math.sin(Game.frame * 0.07) * 0.5 : 0;
 
     // steam burn flicker
     if (p.hurt > 0 && (p.hurt >> 2) % 2 === 0) return;
+
+    // grounded contact shadow — an ellipse reads as "standing on the slab",
+    // a flat bar reads as a sticker
+    ctx.save();
+    ctx.fillStyle = "rgba(3,6,12,0.42)";
+    ctx.beginPath();
+    ctx.ellipse(cx + p.w / 2, p.y + p.h + 1.5, p.w * 0.52, 2.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
     ctx.save();
     ctx.translate(cx + p.w / 2, cy);
     ctx.scale(p.facing, 1);
     ctx.translate(-p.w / 2, 0);
+    ctx.translate(0, bob);
 
-    ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(0, p.h - 1, p.w, 2);
     ctx.fillStyle = PAL.bg2;
     if (walking) {
       ctx.fillRect(1, p.h - 6 + legPhase, 4, 6 - Math.abs(legPhase));
@@ -2361,20 +2421,27 @@
     ctx.fillStyle = PAL.vest; ctx.fillRect(1, 8, 10, 8);
     ctx.fillStyle = PAL.vestHi; ctx.fillRect(1, 8, 10, 2); ctx.fillRect(1, 13, 10, 1);
     ctx.fillStyle = PAL.skin; ctx.fillRect(0, 9, 2, 5); ctx.fillRect(10, 9, 2, 5);
-    // scanner in hand
+    // scanner in hand — backlit display with a small bloom
     ctx.fillStyle = PAL.bg0; ctx.fillRect(10, 8, 4, 6);
     ctx.fillStyle = Input.held("scan") ? PAL.orange : PAL.cyan; ctx.fillRect(11, 9, 2, 3);
+    glow(12, 10.5, 6, Input.held("scan") ? "255,150,50" : "34,211,238", 0.16);
     ctx.fillStyle = PAL.skin; ctx.fillRect(3, 2, 6, 6);
     ctx.fillStyle = PAL.orange; ctx.fillRect(2, 0, 8, 3);
     ctx.fillStyle = PAL.orangeD; ctx.fillRect(2, 2, 8, 1);
     ctx.fillStyle = (Game.frame >> 3) % 2 ? PAL.cyan : PAL.cyanD; ctx.fillRect(5, 1, 1, 1);
-    ctx.fillStyle = PAL.bg0; ctx.fillRect(6, 4, 2, 2);
-    ctx.fillStyle = PAL.cyan; ctx.fillRect(7, 4, 1, 1);
+    // visor — wider, with its own faint glow so the face reads at a distance
+    ctx.fillStyle = "#0A1220"; ctx.fillRect(5.5, 3.5, 5, 3);
+    ctx.fillStyle = (Game.frame >> 3) % 2 ? "#7DEBFA" : PAL.cyan; ctx.fillRect(6.5, 4.5, 3, 1.5);
+    glow(8, 5, 4.5, "34,211,238", 0.14);
     // helmet lamp housing when the flashlight is carried
     if (Game.hasFlash) {
       ctx.fillStyle = lampActive() ? PAL.yellow : PAL.metalLo;
       ctx.fillRect(9, 0, 3, 2);
+      if (lampActive()) glow(10.5, 1, 5, "250,204,21", 0.18);
     }
+    // light pass over the whole body + hot rim on the helmet
+    shadeSprite(0, 0, p.w, p.h - 2);
+    ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.fillRect(2, 0, 8, 1);
     if (p.flash > 0) {
       ctx.fillStyle = "rgba(255,255,255," + (p.flash / 14) * 0.4 + ")";
       ctx.fillRect(-2, -2, p.w + 4, p.h + 4);
