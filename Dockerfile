@@ -7,7 +7,7 @@ FROM nginx:1.27-alpine
 
 LABEL org.opencontainers.image.title="AssetTrace: The Handover Quest"
 LABEL org.opencontainers.image.description="Y2K retro arcade marketing game about the FM handover gap"
-LABEL org.opencontainers.image.version="3.0.0"
+LABEL org.opencontainers.image.version="3.1.0"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Static site files. og-image.png is the share card for LinkedIn/Slack previews.

@@ -6,7 +6,7 @@
 services:
   assettrace-game:
     build: .
-    image: assettrace/handover-quest:3.0.0
+    image: assettrace/handover-quest:3.1.0
     container_name: assettrace-game
     restart: unless-stopped
 

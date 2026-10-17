@@ -91,7 +91,7 @@
     BUILDING_ASSETS: 400,
     FIELDS_PER_RECORD: 8,
 
-    VERSION: "3.0.0",
+    VERSION: "3.1.0",
     HS_KEY: "at_handover_hs_v2",
   };
 
@@ -1602,6 +1602,7 @@
     drawBackground();
     drawPlats();
     drawFloorMarks();      // painted markings belong ON the slab, not behind it
+    drawLampPools();       // lamp pools sit ON the floor, above its markings
     drawAmbientDust();
     drawPickups();
     drawAssets();
@@ -1617,6 +1618,7 @@
 
     ctx.restore();
 
+    drawForegroundLayer();
     drawScreenUI();
   }
 
@@ -1666,7 +1668,7 @@
       ceil: "#0c1728", ceilHi: "#16253c",
       lamp: "rgba(214,240,255,", lampRGB: "214,240,255",
       haze: "rgba(120,200,255,0.04)",
-      fog: "90,170,230", horizon: "rgba(90,200,255,0.08)", grade: "rgba(110,190,255,0.13)",
+      fog: "90,170,230", horizon: "rgba(90,200,255,0.08)", grade: "rgba(110,190,255,0.13)", dado: "rgba(185,200,222,0.10)",
       wallProps: ["hydrant", "extinguisher", "exitSign", "doorSteel", "signPlate", "radiator"],
       midProps: ["manifold", "pipeColumn", "ductBox", "pumpSet", "conduits", "vessel"],
       nearProps: ["cabinetRow", "tank", "ahuBox", "pumpSet", "stairFlight"],
@@ -1680,7 +1682,7 @@
       lamp: "rgba(255,225,180,", lampRGB: "255,225,180",
       ceil: "#0e1a2d", ceilHi: "#18273e",
       haze: "rgba(255,150,70,0.05)",
-      fog: "235,160,95", horizon: "rgba(255,150,70,0.10)", grade: "rgba(255,140,70,0.15)",
+      fog: "235,160,95", horizon: "rgba(255,150,70,0.10)", grade: "rgba(255,140,70,0.15)", dado: "rgba(225,190,150,0.10)",
       wallProps: ["exitSign", "hydrant", "fileBoxes", "signPlate", "doorSteel", "extinguisher"],
       midProps: ["manifold", "ductBox", "pipeColumn", "fileBoxes", "vessel", "pumpSet"],
       nearProps: ["cabinetRow", "ahuBox", "tank", "cabinetRow"],
@@ -1812,6 +1814,10 @@
     // escape sign — the strongest "this is a building" cue, and a colour accent
     exitSign(x, y, S, i) {
       const sy = y - 62 - ((hash01(i) * 10) | 0);
+      // the sign is its own light source: green bloom plus a soft green wash
+      // running down the wall to the floor
+      glow(x + 8, sy + 3.5, 22, "52,211,153", 0.22);
+      glow(x + 8, y, 26, "52,211,153", 0.05);
       ctx.fillStyle = "rgba(52,211,153,0.10)"; ctx.fillRect(x - 5, sy - 4, 26, 14);
       ctx.fillStyle = "#12503c"; ctx.fillRect(x, sy, 16, 7);
       ctx.fillStyle = "#34D399"; ctx.fillRect(x + 1, sy + 1, 14, 5);
@@ -1884,6 +1890,15 @@
   };
 
   /** Scatter props of a layer along the level, deterministically. */
+  // Approximate footprints for the contact shadows — a prop that meets the
+  // floor with a soft shadow stops floating. Wall-mounted items stay 0.
+  const PROP_FOOTPRINT = {
+    ahuBox: 60, cabinetRow: 72, stairFlight: 48, tank: 34,
+    manifold: 42, pipeColumn: 20, ductBox: 38, pumpSet: 46, conduits: 14, vessel: 24,
+    scaffold: 52, cableDrum: 24, pallets: 42, doorSteel: 0, signPlate: 0,
+    extinguisher: 12, hydrant: 18, exitSign: 0, fileBoxes: 36, radiator: 28,
+  };
+
   function propLayer(cam, par, spacing, groundY, kinds, seed, S) {
     const off = cam * par;
     const first = Math.floor((off - 130) / spacing);
@@ -1895,7 +1910,11 @@
       if (hash01(i * 17 + seed) < 0.12) continue;                 // leave gaps
       const kind = kinds[(hash01(i * 13 + seed * 3) * kinds.length) | 0];
       const fn = PROPS[kind];
-      if (fn) fn(cam + sx, groundY, S, i * 7 + seed);
+      if (fn) {
+        const fw = PROP_FOOTPRINT[kind] || 0;
+        if (fw) softShadow(cam + sx + fw / 2, groundY + 1.5, fw * 0.58, 2.6, 0.30);
+        fn(cam + sx, groundY, S, i * 7 + seed);
+      }
     }
   }
 
@@ -1981,6 +2000,23 @@
     }
     ctx.fillStyle = S.seam;                          // horizontal pour joints
     for (let hy = 54; hy < CFG.H; hy += 54) ctx.fillRect(cam, hy, CFG.W, 1);
+
+    // Finished rooms (plant/handover): a painted dado zone over the raw shell,
+    // separated by a construction joint — the wall gains building logic.
+    if (S.dado) {
+      const top = CFG.GROUND_Y - 46;
+      ctx.fillStyle = S.dado;
+      ctx.fillRect(cam, top, CFG.W, CFG.GROUND_Y - top);
+      ctx.fillStyle = "rgba(10,16,30,0.30)";         // faint block courses
+      for (let by = top + 7, r = 0; by < CFG.GROUND_Y - 2; by += 9, r++) {
+        ctx.fillRect(cam, by, CFG.W, 1);             // bed joint
+        const shift = r % 2 ? 12 : 0;
+        for (let bx = -(off % 24) - 24; bx < CFG.W + 24; bx += 24)
+          ctx.fillRect(cam + bx + shift, by - 8, 1, 8);   // head joint
+      }
+      ctx.fillStyle = "rgba(8,13,24,0.55)";          // Bauwerksfuge
+      ctx.fillRect(cam, top, CFG.W, 2);
+    }
   }
 
   /** Daylight openings — only the construction phase still has them. */
@@ -2045,23 +2081,29 @@
       ctx.fillStyle = S.ceil; ctx.fillRect(cam + sx - 2, 30, 20, 2);
     }
 
-    // fluorescent battens, a few of them with a failing ballast
+    // fluorescent battens as LIGHT POOLS: brightness varies per lamp, some are
+    // dead, one stutters — the room gets bright islands and dark gaps instead
+    // of uniform illumination. Floor pools are collected for drawLampPools().
     const lstep = 118, lstart = Math.floor(off / lstep);
     for (let i = lstart; i <= lstart + CFG.W / lstep + 2; i++) {
       const sx = i * lstep - off + 40;
       if (sx < -40 || sx > CFG.W + 20) continue;
       const wx = cam + sx;
+      const inten = 0.45 + hash01(i * 57) * 0.85;             // 0.45 … 1.3
+      const dead = hash01(i * 13 + 5) < 0.12;                 // the dark gaps
       const flickers = hash01(i * 91) < 0.22;
-      const bad = flickers && ((Game.frame + i * 37) % 96) < 7;
+      const bad = dead || (flickers && ((Game.frame + i * 37) % 96) < 12);
       ctx.fillStyle = S.ceilHi; ctx.fillRect(wx, 18, 34, 3);
       ctx.fillStyle = bad ? S.ceilHi : "#d8e6f2";
       ctx.fillRect(wx + 2, 21, 30, 2);
-      if (!bad) {
-        glow(wx + 17, 23, 30, S.lampRGB, 0.12);
+      // stuttering ballast: the cone sputters at random strength
+      const live = dead ? 0 : (flickers && bad) ? inten * (0.25 + Math.random() * 0.75) : inten;
+      if (live > 0.05) {
+        glow(wx + 17, 23, 30, S.lampRGB, 0.12 * live);
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
         const g = ctx.createLinearGradient(0, 22, 0, 130);
-        g.addColorStop(0, S.lamp + "0.13)");
+        g.addColorStop(0, S.lamp + (0.13 * live).toFixed(3) + ")");
         g.addColorStop(1, S.lamp + "0)");
         ctx.fillStyle = g;
         ctx.beginPath();
@@ -2069,6 +2111,7 @@
         ctx.lineTo(wx + 58, 130); ctx.lineTo(wx - 24, 130);
         ctx.closePath(); ctx.fill();
         ctx.restore();
+        lampPools.push({ x: wx + 17, r: 34 + 26 * live, rgb: S.lampRGB, a: 0.055 * live });
       }
     }
   }
@@ -2144,9 +2187,29 @@
     }
   }
 
+  // Light pools the ceiling lamps cast onto the floor — filled by
+  // drawCeilingLayer during background rendering, drawn after the floor.
+  let lampPools = [];
+  function drawLampPools() {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (const p of lampPools) {
+      const g = ctx.createRadialGradient(p.x, CFG.GROUND_Y, 2, p.x, CFG.GROUND_Y, p.r);
+      g.addColorStop(0, "rgba(" + p.rgb + "," + p.a.toFixed(3) + ")");
+      g.addColorStop(1, "rgba(" + p.rgb + ",0)");
+      ctx.save();
+      ctx.translate(p.x, CFG.GROUND_Y); ctx.scale(1, 0.22); ctx.translate(-p.x, -CFG.GROUND_Y);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, CFG.GROUND_Y, p.r, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
   function drawBackground() {
     const cam = Game.cam.x;
     const S = SCN[Game.lvl.theme] || SCN.plant;
+    lampPools.length = 0;
 
     // sky / room volume — gradient plus a colored horizon band
     const g = ctx.createLinearGradient(0, 0, 0, CFG.H);
@@ -3010,6 +3073,56 @@
     ctx.fillStyle = rg;
     ctx.beginPath(); ctx.arc(lx, ly, CFG.LIGHT_RANGE, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
+  }
+
+  /** Foreground silhouettes with parallax > 1, defocused: completes the depth
+      sandwich (blurred far plane — sharp play layer — blurred near plane).
+      Thin elements only, edges of the stage: gameplay stays fully readable. */
+  function drawForegroundLayer() {
+    const par = 1.28, spacing = 560;
+    const off = Game.cam.x * par;
+    const first = Math.floor((off - 60) / spacing);
+    const last = Math.ceil((off + CFG.W + 60) / spacing);
+    focusDepth(2.2);
+    for (let i = first; i <= last; i++) {
+      if (hash01(i * 23 + 3) < 0.3) continue;                  // not every slot
+      const x = i * spacing - off + (hash01(i * 31) - 0.5) * 240;
+      if (x < -40 || x > CFG.W + 40) continue;
+      const kind = (hash01(i * 13 + 7) * 3) | 0;
+      if (kind === 0) {
+        // structural pillar edge crossing the view
+        const w = 14 + hash01(i * 5) * 8;
+        const g = ctx.createLinearGradient(x, 0, x + w, 0);
+        g.addColorStop(0, "rgba(5,9,18,0.92)");
+        g.addColorStop(0.75, "rgba(5,9,18,0.55)");
+        g.addColorStop(1, "rgba(5,9,18,0.15)");
+        ctx.fillStyle = g;
+        ctx.fillRect(x, -4, w, CFG.H + 8);
+      } else if (kind === 1) {
+        // hanging cable, gently swinging
+        const sway = Math.sin(Game.frame * 0.017 + i * 2.1) * 7;
+        const len = 60 + hash01(i * 11) * 70;
+        ctx.strokeStyle = "rgba(5,9,18,0.85)";
+        ctx.lineWidth = 2.6;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x, -2);
+        ctx.quadraticCurveTo(x + sway * 0.6, len * 0.6, x + sway, len);
+        ctx.stroke();
+      } else {
+        // drop chain with a hook
+        const sway = Math.sin(Game.frame * 0.013 + i * 1.3) * 4;
+        const len = 46 + hash01(i * 17) * 50;
+        ctx.strokeStyle = "rgba(5,9,18,0.8)";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(x, -2); ctx.lineTo(x + sway, len); ctx.stroke();
+        ctx.fillStyle = "rgba(5,9,18,0.8)";
+        for (let cy = 6; cy < len; cy += 7)
+          ctx.fillRect(x + (sway * cy) / len - 1, cy, 2, 3);
+        ctx.beginPath(); ctx.arc(x + sway, len + 3, 2.4, 0, TAU); ctx.fill();
+      }
+    }
+    focusSharp();
   }
 
   /** Screen-space overlays: battery, combo, deadline flash. */
