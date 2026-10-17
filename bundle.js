@@ -1,6 +1,6 @@
 /* ============================================================================
-   AssetTrace: The Handover Quest — v2.0
-   80s retro platformer that gamifies the FM "Handover Gap".
+   AssetTrace: The Handover Quest — v2.2
+   Late-90s / Y2K retro platformer that gamifies the FM "Handover Gap".
 
    v2.0 changes (P0 + P1):
      P0-a  Countdown timer ("Übergabe in ...") — time is the only currency.
@@ -38,7 +38,10 @@
      1. CONFIG & PALETTE
   --------------------------------------------------------------------------- */
   const CFG = {
-    W: 480, H: 270,
+    // Logic space stays 480x270 (physics, level data, hitboxes are untouched);
+    // the canvas renders at SCALE=2 so edges, glows and gradients get a finer
+    // grid — the difference between 8-bit chunk and late-90s pixel art.
+    W: 480, H: 270, SCALE: 2,
     GROUND_Y: 246,
 
     // physics
@@ -88,7 +91,7 @@
     BUILDING_ASSETS: 400,
     FIELDS_PER_RECORD: 8,
 
-    VERSION: "2.1.0",
+    VERSION: "2.2.0",
     HS_KEY: "at_handover_hs_v2",
   };
 
@@ -195,7 +198,7 @@
   --------------------------------------------------------------------------- */
   const Audio = (function () {
     let ctx = null, master = null, musicGain = null, sfxGain = null;
-    let started = false, muted = false, musicTimer = null, step = 0;
+    let verb = null, started = false, muted = false, musicTimer = null, step = 0, intense = false;
 
     function init() {
       if (ctx) return;
@@ -203,13 +206,28 @@
       if (!AC) return;
       ctx = new AC();
       master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
-      musicGain = ctx.createGain(); musicGain.gain.value = 0.28; musicGain.connect(master);
-      sfxGain = ctx.createGain(); sfxGain.gain.value = 0.55; sfxGain.connect(master);
+      musicGain = ctx.createGain(); musicGain.gain.value = 0.30; musicGain.connect(master);
+      sfxGain = ctx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(master);
+      // Generated impulse reverb — one shared send bus, the "studio" sound of 1999.
+      try {
+        verb = ctx.createConvolver();
+        const len = Math.floor(ctx.sampleRate * 1.6);
+        const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+        for (let ch = 0; ch < 2; ch++) {
+          const d = ir.getChannelData(ch);
+          for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
+        }
+        verb.buffer = ir;
+        const send = ctx.createGain(); send.gain.value = 0.16;
+        sfxGain.connect(send); musicGain.connect(send);
+        send.connect(verb); verb.connect(master);
+      } catch (e) { verb = null; }
     }
     function resume() { if (ctx && ctx.state === "suspended") ctx.resume(); }
     const now = () => ctx ? ctx.currentTime : 0;
 
-    function tone(freq, dur, type, when, vol, glideTo) {
+    /** opts: {lp, lpTo} — a lowpass with an optional cutoff sweep. */
+    function tone(freq, dur, type, when, vol, glideTo, opts) {
       if (!ctx || muted) return;
       const t0 = when || ctx.currentTime;
       const o = ctx.createOscillator(), g = ctx.createGain();
@@ -219,10 +237,18 @@
       g.gain.setValueAtTime(0.0001, t0);
       g.gain.exponentialRampToValueAtTime(vol || 0.3, t0 + 0.01);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      o.connect(g); g.connect(sfxGain);
+      let node = o;
+      if (opts && opts.lp) {
+        const f = ctx.createBiquadFilter(); f.type = "lowpass";
+        f.frequency.setValueAtTime(opts.lp, t0);
+        if (opts.lpTo) f.frequency.exponentialRampToValueAtTime(opts.lpTo, t0 + dur);
+        o.connect(f); node = f;
+      }
+      node.connect(g); g.connect(sfxGain);
       o.start(t0); o.stop(t0 + dur + 0.02);
     }
-    function noise(dur, vol, filterFreq, when) {
+    /** opts: {hp, sweepTo} — band/highpass noise with an optional sweep. */
+    function noise(dur, vol, filterFreq, when, opts) {
       if (!ctx || muted) return;
       const t0 = when || ctx.currentTime;
       const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
@@ -230,40 +256,42 @@
       const d = buf.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
       const src = ctx.createBufferSource(); src.buffer = buf;
-      const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = filterFreq || 1200;
+      const f = ctx.createBiquadFilter(); f.type = (opts && opts.hp) ? "highpass" : "bandpass";
+      f.frequency.setValueAtTime(filterFreq || 1200, t0);
+      if (opts && opts.sweepTo) f.frequency.exponentialRampToValueAtTime(opts.sweepTo, t0 + dur);
       const g = ctx.createGain(); g.gain.value = vol || 0.25;
       src.connect(f); f.connect(g); g.connect(sfxGain);
       src.start(t0);
     }
 
     const SFX = {
-      jump()    { tone(420, 0.16, "square", null, 0.26, 760); },
-      land()    { tone(160, 0.07, "triangle", null, 0.20, 90); },
-      step()    { tone(120, 0.04, "square", null, 0.09); },
-      shutter() { tone(1200, 0.04, "square"); noise(0.12, 0.18, 2400); tone(700, 0.09, "square", now() + 0.04, 0.18, 1500); },
-      pickbeep(){ tone(1046, 0.05, "square"); },
-      focus(v)  { tone(500 + v * 900, 0.045, "square", null, 0.13); },   // rising pitch = sharper focus
-      locked()  { tone(1568, 0.06, "square"); tone(2093, 0.08, "square", now() + 0.05, 0.2); },
-      success() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.12, "square", now() + i * 0.08, 0.26)); },
-      error()   { tone(180, 0.22, "sawtooth", null, 0.28, 90); noise(0.1, 0.12, 400); },
-      blocked() { tone(220, 0.10, "square", null, 0.20, 150); },
-      steam()   { noise(0.35, 0.20, 900); },
-      type()    { tone(1400, 0.02, "square", null, 0.16); },
-      typo()    { tone(240, 0.10, "sawtooth", null, 0.22, 160); },
-      classify(){ tone(660, 0.05, "square"); tone(990, 0.06, "square", now() + 0.05, 0.18); },
-      correct() { [784, 1046, 1318].forEach((f, i) => tone(f, 0.10, "square", now() + i * 0.07, 0.24)); },
-      wrong()   { tone(300, 0.20, "sawtooth", null, 0.28, 140); noise(0.14, 0.10, 500); },
-      tick()    { tone(1760, 0.03, "square", null, 0.14); },
-      lowtime() { tone(330, 0.09, "square", null, 0.22); },
-      battery() { [523, 784, 1046].forEach((f, i) => tone(f, 0.07, "square", now() + i * 0.05, 0.22)); },
-      lamp()    { tone(880, 0.04, "triangle", null, 0.16); },
-      levelup() { [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, 0.14, "square", now() + i * 0.10, 0.28)); },
-      win()     { [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => tone(f, 0.18, "square", now() + i * 0.13, 0.30)); },
-      fail()    { [392, 330, 262, 196].forEach((f, i) => tone(f, 0.24, "sawtooth", now() + i * 0.18, 0.26)); },
-      combo(n)  { tone(660 + n * 110, 0.07, "square", null, 0.22); },
+      jump()    { tone(300, 0.18, "sawtooth", null, 0.20, 640, { lp: 900, lpTo: 2600 }); noise(0.10, 0.08, 2800); },
+      land()    { tone(150, 0.08, "triangle", null, 0.22, 60, { lp: 500 }); noise(0.05, 0.07, 320); },
+      step()    { noise(0.03, 0.06, 1000, null, { hp: true }); },
+      shutter() { noise(0.10, 0.20, 3400, null, { sweepTo: 900 }); tone(1400, 0.05, "square", null, 0.15, 900); },
+      pickbeep(){ tone(1245, 0.05, "square", null, 0.15, 1660); },
+      focus(v)  { tone(420 + v * 820, 0.05, "sawtooth", null, 0.08, null, { lp: 1900 }); },
+      locked()  { tone(1568, 0.05, "square"); tone(2093, 0.09, "square", now() + 0.05, 0.16); tone(3136, 0.14, "sawtooth", now() + 0.09, 0.06, null, { lp: 4200 }); },
+      success() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.14, "sawtooth", now() + i * 0.07, 0.15, null, { lp: 2800 })); },
+      error()   { tone(200, 0.24, "sawtooth", null, 0.26, 82, { lp: 800, lpTo: 240 }); noise(0.12, 0.10, 420); },
+      blocked() { tone(240, 0.10, "square", null, 0.18, 150); },
+      steam()   { noise(0.35, 0.18, 1600, null, { sweepTo: 500 }); },
+      type()    { tone(1600, 0.02, "square", null, 0.13); },
+      typo()    { tone(260, 0.10, "sawtooth", null, 0.20, 150, { lp: 900 }); },
+      classify(){ tone(660, 0.05, "square"); tone(990, 0.06, "square", now() + 0.05, 0.14); },
+      correct() { [784, 1046, 1318].forEach((f, i) => tone(f, 0.11, "sawtooth", now() + i * 0.06, 0.14, null, { lp: 3200 })); },
+      wrong()   { tone(150, 0.26, "sawtooth", null, 0.22, 70, { lp: 700, lpTo: 200 }); tone(75, 0.26, "square", null, 0.14); noise(0.14, 0.09, 480); },
+      tick()    { tone(1760, 0.03, "square", null, 0.11); },
+      lowtime() { tone(330, 0.09, "square", null, 0.18, 300); },
+      battery() { [523, 784, 1046].forEach((f, i) => tone(f, 0.07, "square", now() + i * 0.05, 0.18)); },
+      lamp()    { tone(880, 0.04, "triangle", null, 0.13); },
+      levelup() { [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, 0.15, "sawtooth", now() + i * 0.09, 0.15, null, { lp: 3600 })); },
+      win()     { [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => tone(f, 0.20, "sawtooth", now() + i * 0.12, 0.16, null, { lp: 3800 })); },
+      fail()    { [392, 330, 262, 196].forEach((f, i) => tone(f, 0.26, "sawtooth", now() + i * 0.18, 0.20, f * 0.8, { lp: 1000, lpTo: 300 })); },
+      combo(n)  { tone(660 + n * 110, 0.07, "square", null, 0.16); },
     };
 
-    // --- looping synthwave: Am - F - C - G ---
+    // --- looping trance: Am - F - C - G, supersaw stabs + 909-ish beat ---
     const BASS = [
       45,0,45,0, 53,0,45,0,  41,0,41,0, 53,0,41,0,
       41,0,41,0, 53,0,41,0,  48,0,48,0, 55,0,48,0,
@@ -276,9 +304,10 @@
       72,76,79,76, 69,72,76,72, 79,84,88,84, 71,74,77,74,
       67,71,74,71, 62,67,71,67, 74,79,83,79, 74,76,79,76,
     ];
+    const ROOTS = [45, 41, 48, 43];
     const midi = n => 440 * Math.pow(2, (n - 69) / 12);
 
-    function mtone(freq, dur, type, vol) {
+    function mtone(freq, dur, type, vol, lp) {
       if (!ctx || muted) return;
       const t0 = ctx.currentTime;
       const o = ctx.createOscillator(), g = ctx.createGain();
@@ -287,39 +316,83 @@
       g.gain.setValueAtTime(0.0001, t0);
       g.gain.exponentialRampToValueAtTime(vol || 0.2, t0 + 0.01);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      o.connect(g); g.connect(musicGain);
+      let node = o;
+      if (lp) {
+        const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = lp;
+        o.connect(f); node = f;
+      }
+      node.connect(g); g.connect(musicGain);
       o.start(t0); o.stop(t0 + dur + 0.02);
     }
-    function mNoise(dur, vol) {
+    function kick() {
+      if (!ctx || muted) return;
+      const t0 = ctx.currentTime;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.setValueAtTime(140, t0);
+      o.frequency.exponentialRampToValueAtTime(44, t0 + 0.09);
+      g.gain.setValueAtTime(intense ? 0.55 : 0.44, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.13);
+      o.connect(g); g.connect(musicGain);
+      o.start(t0); o.stop(t0 + 0.15);
+    }
+    function hat(dur, vol) {
       if (!ctx || muted) return;
       const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
       const buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.4);
       const s = ctx.createBufferSource(); s.buffer = buf;
-      const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 5200;
+      const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 7200;
       const g = ctx.createGain(); g.gain.value = vol;
       s.connect(f); f.connect(g); g.connect(musicGain); s.start();
+    }
+    /** Detuned saw stack through a sweeping lowpass — the 1999 supersaw. */
+    function stab(root) {
+      if (!ctx || muted) return;
+      const t0 = ctx.currentTime;
+      const f = ctx.createBiquadFilter(); f.type = "lowpass";
+      f.frequency.setValueAtTime(420, t0);
+      f.frequency.exponentialRampToValueAtTime(intense ? 3000 : 2300, t0 + 0.4);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(intense ? 0.15 : 0.11, t0 + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+      f.connect(g); g.connect(musicGain);
+      [root + 12, root + 19, root + 24].forEach((n, i) => {
+        [-1, 1].forEach(det => {
+          const o = ctx.createOscillator();
+          o.type = "sawtooth";
+          o.frequency.value = midi(n) * Math.pow(2, det * 0.0035);
+          const og = ctx.createGain(); og.gain.value = i === 0 ? 0.5 : 0.32;
+          o.connect(og); og.connect(f);
+          o.start(t0); o.stop(t0 + 0.55);
+        });
+      });
     }
     function musicStep() {
       if (!ctx || muted) return;
       const b = BASS[step % BASS.length], a = ARP[step % ARP.length];
-      if (b) mtone(midi(b), 0.20, "triangle", 0.30);
-      if (a) mtone(midi(a), 0.10, "square", 0.085);
-      if (step % 2 === 0) mNoise(0.025, 0.05);
+      if (step % 4 === 0) kick();
+      if (step % 2 === 1) hat(0.03, 0.05);
+      else if (step % 8 === 6) hat(0.10, 0.055);
+      if (b) mtone(midi(b), 0.17, "sawtooth", 0.22, 420);
+      if (a) mtone(midi(a), 0.07, "square", 0.045, 1600);
+      if (step % 8 === 0) stab(ROOTS[((step / 16) | 0) % 4]);
       step++;
     }
     function startMusic() {
       if (!ctx || musicTimer) return;
       step = 0;
-      musicTimer = setInterval(musicStep, 134);   // 16ths @ ~112 BPM
+      musicTimer = setInterval(musicStep, 113);   // 16ths @ ~133 BPM — trance tempo
     }
     function start() {
       init(); resume();
       if (!started) { started = true; startMusic(); }
     }
     function setIntensity(hot) {
-      // subtle tension shift: the music gets louder as the deadline closes in
-      if (musicGain) musicGain.gain.value = hot ? 0.36 : 0.28;
+      // the deadline mix: kick and stabs push forward as the clock runs out
+      intense = !!hot;
+      if (musicGain) musicGain.gain.value = hot ? 0.36 : 0.30;
     }
     function toggleMute() {
       muted = !muted;
@@ -873,8 +946,8 @@
         vy: rand(-3.2, -1.8), life: rand(24, 40), max: 40,
         c: choice([PAL.cyan, PAL.green, PAL.white]), size: 1, grav: -0.02 });
   }
-  function floater(x, y, text, c) {
-    Game.floaters.push({ x, y, text, c: c || PAL.orange, life: 62, max: 62 });
+  function floater(x, y, text, c, glitch) {
+    Game.floaters.push({ x, y, text, c: c || PAL.orange, glitch, seed: (Math.random() * 7) | 0, life: 62, max: 62 });
   }
 
   function loseTime(sec, why) {
@@ -1232,7 +1305,7 @@
     Game.state = "playing";
     hideOverlay();
     completeAsset(a, pts, ex.ok);
-    if (!ex.ok) floater(a.x + a.w / 2, a.y - 22, "BAD DATA", PAL.red);
+    if (!ex.ok) floater(a.x + a.w / 2, a.y - 22, "BAD DATA", PAL.red, true);
   }
 
   /* ---------------------------------------------------------------------------
@@ -1390,8 +1463,28 @@
      16. RENDERING
   --------------------------------------------------------------------------- */
   const cv = document.getElementById("at-canvas");
+  cv.width = CFG.W * CFG.SCALE;
+  cv.height = CFG.H * CFG.SCALE;
   const ctx = cv.getContext("2d");
   ctx.imageSmoothingEnabled = false;
+
+  /** All drawing happens in 480x270 logic units on a SCALE-times larger backing
+      store. Called at the top of every frame path (render + backdrops). */
+  function beginFrame() { ctx.setTransform(CFG.SCALE, 0, 0, CFG.SCALE, 0, 0); }
+
+  /** Additive radial glow — the "colored light" look the late 90s loved.
+      rgb is a bare "r,g,b" triple so the alpha stops can vary. */
+  function glow(x, y, r, rgb, a) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, "rgba(" + rgb + "," + a + ")");
+    g.addColorStop(0.6, "rgba(" + rgb + "," + (a * 0.35).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(" + rgb + ",0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.restore();
+  }
 
   function render() {
     const p = Game.player;
@@ -1406,6 +1499,7 @@
       if (Game.shake < 0.3) Game.shake = 0;
     }
 
+    beginFrame();
     ctx.save();
     ctx.translate((-Game.cam.x + sx) | 0, sy | 0);
 
@@ -1459,8 +1553,9 @@
       mid: "#172640", midHi: "#21365a",
       near: "#111d33", nearHi: "#1a2b47",
       ceil: "#131f36", ceilHi: "#1c2d4a",
-      lamp: "rgba(255,236,190,",
+      lamp: "rgba(255,236,190,", lampRGB: "255,236,190",
       haze: "rgba(255,205,140,0.05)",
+      fog: "140,185,240", horizon: "rgba(180,215,255,0.10)",
       wallProps: ["scaffold", "cableDrum", "pallets", "doorSteel", "signPlate", "extinguisher"],
       midProps: ["ductBox", "pipeColumn", "scaffold", "conduits", "pallets"],
       nearProps: ["ahuBox", "cabinetRow", "stairFlight", "tank"],
@@ -1472,8 +1567,9 @@
       mid: "#0e1b31", midHi: "#182a45",
       near: "#0a1425", nearHi: "#132234",
       ceil: "#0c1728", ceilHi: "#16253c",
-      lamp: "rgba(214,240,255,",
+      lamp: "rgba(214,240,255,", lampRGB: "214,240,255",
       haze: "rgba(120,200,255,0.04)",
+      fog: "90,170,230", horizon: "rgba(90,200,255,0.08)",
       wallProps: ["hydrant", "extinguisher", "exitSign", "doorSteel", "signPlate", "radiator"],
       midProps: ["manifold", "pipeColumn", "ductBox", "pumpSet", "conduits", "vessel"],
       nearProps: ["cabinetRow", "tank", "ahuBox", "pumpSet", "stairFlight"],
@@ -1484,9 +1580,10 @@
       far: "#152338", farHi: "#1e2f48", seam: "#0e1927",
       mid: "#111d31", midHi: "#1b2b45",
       near: "#0c1527", nearHi: "#152334",
-      lamp: "rgba(255,225,180,",
+      lamp: "rgba(255,225,180,", lampRGB: "255,225,180",
       ceil: "#0e1a2d", ceilHi: "#18273e",
       haze: "rgba(255,150,70,0.05)",
+      fog: "235,160,95", horizon: "rgba(255,150,70,0.10)",
       wallProps: ["exitSign", "hydrant", "fileBoxes", "signPlate", "doorSteel", "extinguisher"],
       midProps: ["manifold", "ductBox", "pipeColumn", "fileBoxes", "vessel", "pumpSet"],
       nearProps: ["cabinetRow", "ahuBox", "tank", "cabinetRow"],
@@ -1846,6 +1943,7 @@
       ctx.fillStyle = bad ? S.ceilHi : "#d8e6f2";
       ctx.fillRect(wx + 2, 21, 30, 2);
       if (!bad) {
+        glow(wx + 17, 23, 30, S.lampRGB, 0.12);
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
         const g = ctx.createLinearGradient(0, 22, 0, 130);
@@ -1894,32 +1992,49 @@
     }
   }
 
+  /** Vertical fog that thickens toward the floor — the late-90s "draw distance"
+      trick: each scenery plane sits behind its own band of atmosphere. */
+  function depthFog(cam, S, a) {
+    if (a <= 0) return;
+    const g = ctx.createLinearGradient(0, 26, 0, CFG.GROUND_Y + 6);
+    g.addColorStop(0, "rgba(" + S.fog + ",0)");
+    g.addColorStop(0.55, "rgba(" + S.fog + "," + (a * 0.45).toFixed(3) + ")");
+    g.addColorStop(1, "rgba(" + S.fog + "," + a.toFixed(3) + ")");
+    ctx.fillStyle = g;
+    ctx.fillRect(cam, 0, CFG.W, CFG.H);
+  }
+
   function drawBackground() {
     const cam = Game.cam.x;
     const S = SCN[Game.lvl.theme] || SCN.plant;
 
-    // sky / room volume
+    // sky / room volume — gradient plus a colored horizon band
     const g = ctx.createLinearGradient(0, 0, 0, CFG.H);
-    g.addColorStop(0, S.sky0); g.addColorStop(0.65, S.sky1); g.addColorStop(1, S.sky0);
+    g.addColorStop(0, S.sky0); g.addColorStop(0.55, S.sky1); g.addColorStop(1, S.sky0);
     ctx.fillStyle = g; ctx.fillRect(cam, 0, CFG.W, CFG.H);
+    const hg = ctx.createLinearGradient(0, 90, 0, CFG.GROUND_Y);
+    hg.addColorStop(0, "rgba(0,0,0,0)");
+    hg.addColorStop(1, S.horizon);
+    ctx.fillStyle = hg; ctx.fillRect(cam, 90, CFG.W, CFG.GROUND_Y - 90);
 
     // L1: structural shell, L2/L3: same shell but darker and further away
     drawShell(cam, S);
     if (S.openings) drawOpenings(cam, S);
 
-    // depth haze pushes the shell behind the services
-    ctx.fillStyle = S.haze; ctx.fillRect(cam, 0, CFG.W, CFG.H);
+    // depth fog pushes the shell behind the services
+    depthFog(cam, S, 0.13);
 
     // --- services layer (0.42) ---
     propLayer(cam, 0.42, 138, CFG.GROUND_Y, S.midProps, 11, S);
     if (S.trays > 0) drawTray(cam, 0.42, 40, S);
     if (S.ducts) drawPipeRun(cam, 0.42, 60, S, 3);
-    ctx.fillStyle = S.haze; ctx.fillRect(cam, 0, CFG.W, CFG.H);
+    depthFog(cam, S, 0.08);
 
     // --- plant layer (0.7), the big silhouettes ---
     propLayer(cam, 0.7, 186, CFG.GROUND_Y, S.nearProps, 29, S);
     if (S.trays > 1) drawTray(cam, 0.7, 78, S);
     if (S.sprinkler) drawSprinkler(cam, 0.7, 96, S);
+    depthFog(cam, S, 0.04);
 
     // --- ceiling (0.62) ---
     drawCeilingLayer(cam, S);
@@ -1934,22 +2049,27 @@
     // One global scrim over the finished scenery. It keeps every detail but pushes
     // the whole background a step back, so no prop — not a cabinet row, not a red
     // vessel at floor level — can be mistaken for a scannable asset.
-    ctx.fillStyle = "rgba(8,14,26,0.28)";
+    ctx.fillStyle = "rgba(8,14,26,0.24)";
     ctx.fillRect(cam, 0, CFG.W, CFG.H);
   }
 
   function drawPlats() {
     for (const pl of Game.lvl.plats) {
       if (pl.oneway) {
-        ctx.fillStyle = PAL.metal; ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
+        const pg = ctx.createLinearGradient(0, pl.y, 0, pl.y + pl.h);
+        pg.addColorStop(0, PAL.metalHi); pg.addColorStop(0.35, PAL.metal); pg.addColorStop(1, PAL.metalLo);
+        ctx.fillStyle = pg; ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
         ctx.fillStyle = PAL.orange; ctx.fillRect(pl.x, pl.y, pl.w, 2);
+        ctx.fillStyle = "rgba(255,255,255,0.30)"; ctx.fillRect(pl.x, pl.y, pl.w, 1);
         ctx.fillStyle = PAL.metalLo; ctx.fillRect(pl.x, pl.y + pl.h - 2, pl.w, 2);
         for (let x = pl.x; x < pl.x + pl.w; x += 16) {
           ctx.fillStyle = PAL.metalLo; ctx.fillRect(x + 6, pl.y + pl.h, 2, 6);
         }
       } else {
-        ctx.fillStyle = PAL.floor; ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
-        ctx.fillStyle = PAL.floorTop; ctx.fillRect(pl.x, pl.y, pl.w, 3);
+        const pg = ctx.createLinearGradient(0, pl.y, 0, pl.y + pl.h);
+        pg.addColorStop(0, PAL.floorTop); pg.addColorStop(1, PAL.floor);
+        ctx.fillStyle = pg; ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
+        ctx.fillStyle = "rgba(226,232,240,0.35)"; ctx.fillRect(pl.x, pl.y, pl.w, 1);
         ctx.fillStyle = PAL.metalHi;
         for (let x = pl.x + 4; x < pl.x + pl.w - 2; x += 10) ctx.fillRect(x, pl.y + 6, 1, 1);
         ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.fillRect(pl.x, pl.y + pl.h - 3, pl.w, 3);
@@ -2006,12 +2126,16 @@
       if (isTarget) {
         ctx.fillStyle = "rgba(255,107,0,0.14)";
         ctx.fillRect(a.x - 4, a.y - 4, a.w + 8, a.h + 8);
+        // breathing colored light instead of a flat marker
+        glow(a.x + a.w / 2, a.y + a.h / 2, a.w + 20, "255,120,20",
+          0.14 + 0.05 * Math.sin(Game.frame * 0.25));
       }
       drawAssetByType(a);
 
       if (a.captured) {
-        ctx.fillStyle = "rgba(52,211,153,0.22)";
+        ctx.fillStyle = "rgba(52,211,153,0.18)";
         ctx.fillRect(a.x - 2, a.y - 2, a.w + 4, a.h + 4);
+        glow(a.x + a.w / 2, a.y + a.h / 2, a.w + 8, "52,211,153", 0.10);
         ctx.fillStyle = PAL.green;
         ctx.fillRect(a.x + a.w - 6, a.y + 2, 4, 4);
         tinyText("OK", a.x + a.w / 2 - 4, a.y - 6, PAL.green);
@@ -2146,7 +2270,9 @@
     for (const pk of Game.lvl.pickups) {
       if (pk.taken) continue;
       const bob = Math.sin(Game.frame * 0.1) * 1.5;
-      ctx.fillStyle = "rgba(250,204,21,0.16)";
+      glow(pk.x + pk.w / 2, pk.y + pk.h / 2 + bob, pk.w + 16, "250,204,21",
+        0.12 + 0.05 * Math.sin(Game.frame * 0.18));
+      ctx.fillStyle = "rgba(250,204,21,0.14)";
       ctx.fillRect(pk.x - 4, pk.y + bob - 4, pk.w + 8, pk.h + 8);
       // battery cell
       ctx.fillStyle = PAL.metalLo; ctx.fillRect(pk.x, pk.y + bob, pk.w, pk.h);
@@ -2193,8 +2319,17 @@
   function drawFloaters() {
     for (const f of Game.floaters) {
       ctx.globalAlpha = clamp(f.life / f.max, 0, 1);
-      // outlined: score popups fly across arbitrary scenery
-      pxText(f.text, f.x, f.y, f.c, { center: true, outline: true });
+      if (f.glitch) {
+        // chromatic split with a jittering tear: the record literally comes
+        // apart on its way into the CAFM export
+        const j = ((Game.frame + f.seed) % 5) < 2 ? 1 : 0;
+        pxText(f.text, f.x - 1.5 - j, f.y, PAL.red, { center: true });
+        pxText(f.text, f.x + 1.5 + j * 0.5, f.y, PAL.cyan, { center: true });
+        pxText(f.text, f.x, f.y - j * 0.5, f.c, { center: true, outline: true });
+      } else {
+        // outlined: score popups fly across arbitrary scenery
+        pxText(f.text, f.x, f.y, f.c, { center: true, outline: true });
+      }
     }
     ctx.globalAlpha = 1;
   }
@@ -2256,18 +2391,29 @@
     const e = eye(p);
     const ax = a.x + a.w / 2, ay = a.y + a.h / 2;
 
-    // beam
-    const beamCol = st.ok ? "rgba(255,107,0,0.85)" : "rgba(239,68,68,0.7)";
-    ctx.strokeStyle = beamCol; ctx.lineWidth = 1;
+    // beam: a soft wide pass under a thin bright core, plus a colored bloom at
+    // the target — reads as a laser sight instead of a 1px wire
+    ctx.save();
+    ctx.strokeStyle = st.ok ? "rgba(255,107,0,0.22)" : "rgba(239,68,68,0.16)";
+    ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(ax, ay); ctx.stroke();
+    ctx.strokeStyle = st.ok ? "rgba(255,160,70,0.9)" : "rgba(239,68,68,0.75)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(ax, ay); ctx.stroke();
+    ctx.restore();
+    glow(ax, ay, 11, st.ok ? "255,150,50" : "239,68,68", 0.22);
 
-    // target frame
+    // target reticle: corner brackets that breathe, codec style
     const pulse = 2 + Math.sin(Game.frame * 0.4);
-    ctx.strokeStyle = st.color;
-    ctx.strokeRect(a.x - pulse, a.y - pulse, a.w + pulse * 2, a.h + pulse * 2);
-    ctx.fillStyle = st.color;
-    [[a.x, a.y], [a.x + a.w, a.y], [a.x, a.y + a.h], [a.x + a.w, a.y + a.h]]
-      .forEach(pt => ctx.fillRect(pt[0] - 1, pt[1] - 1, 2, 2));
+    const L = 5;
+    const rx = a.x - pulse, ry = a.y - pulse, rw = a.w + pulse * 2, rh = a.h + pulse * 2;
+    ctx.strokeStyle = st.color; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(rx, ry + L); ctx.lineTo(rx, ry); ctx.lineTo(rx + L, ry);
+    ctx.moveTo(rx + rw - L, ry); ctx.lineTo(rx + rw, ry); ctx.lineTo(rx + rw, ry + L);
+    ctx.moveTo(rx, ry + rh - L); ctx.lineTo(rx, ry + rh); ctx.lineTo(rx + L, ry + rh);
+    ctx.moveTo(rx + rw - L, ry + rh); ctx.lineTo(rx + rw, ry + rh); ctx.lineTo(rx + rw, ry + rh - L);
+    ctx.stroke();
 
     // P1: the diegetic status line — always says what is wrong and what to do.
     // Clamped to the viewport so it stays readable at the screen edges.
@@ -2556,12 +2702,67 @@
 
   /* --- animated backdrops for the non-playing states --- */
   function renderTitleBackdrop() {
+    beginFrame();
     Game.frame++;
-    const g = ctx.createLinearGradient(0, 0, 0, CFG.H);
-    g.addColorStop(0, PAL.bg0); g.addColorStop(1, PAL.bg2);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, CFG.W, CFG.H);
-    ctx.strokeStyle = "rgba(255,107,0,0.5)"; ctx.lineWidth = 1;
     const horizon = CFG.H * 0.55;
+
+    // dusk gradient — deep blue falling into a warm band at the horizon
+    const g = ctx.createLinearGradient(0, 0, 0, CFG.H);
+    g.addColorStop(0, "#0A1424"); g.addColorStop(0.48, "#16305E");
+    g.addColorStop(0.66, "#1E4A7A"); g.addColorStop(0.70, "#12233F");
+    g.addColorStop(1, "#070D1A");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, CFG.W, CFG.H);
+
+    // faint data rain over the sky (deterministic columns, slow)
+    for (let i = 0; i < 14; i++) {
+      const x = 10 + i * 35 + hash01(i * 5) * 12;
+      const speed = 0.35 + hash01(i * 3) * 0.7;
+      const y = ((Game.frame * speed + i * 53) % (CFG.H + 40)) - 20;
+      ctx.fillStyle = i % 3 === 0 ? "rgba(52,211,153,0.18)" : "rgba(34,211,238,0.12)";
+      for (let j = 0; j < 4; j++)
+        pxGlyph(String((i * 5 + j * 3 + (Game.frame >> 4)) % 10), x | 0, (y - j * 9) | 0);
+    }
+
+    // horizon light
+    glow(CFG.W / 2, horizon, 150, "34,211,238", 0.08);
+    glow(CFG.W / 2, horizon - 8, 95, "255,140,50", 0.14);
+
+    // sun with scanline cuts — chrome gradient body
+    const sunY = horizon - 10;
+    ctx.save();
+    const sg = ctx.createLinearGradient(0, sunY - 34, 0, sunY + 6);
+    sg.addColorStop(0, "#FFEBD0"); sg.addColorStop(0.5, "#FFB25E"); sg.addColorStop(1, "#FF6B00");
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(CFG.W / 2, sunY, 32, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = "#12233F";
+    for (let i = 0; i < 6; i++) ctx.fillRect(CFG.W / 2 - 34, sunY - 3 + i * 5.5, 68, 1.5 + i * 0.9);
+    ctx.restore();
+    // anamorphic streak across the sun
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const streak = ctx.createLinearGradient(CFG.W / 2 - 150, 0, CFG.W / 2 + 150, 0);
+    streak.addColorStop(0, "rgba(140,225,255,0)");
+    streak.addColorStop(0.5, "rgba(170,235,255,0.55)");
+    streak.addColorStop(1, "rgba(140,225,255,0)");
+    ctx.fillStyle = streak;
+    ctx.fillRect(CFG.W / 2 - 150, sunY - 1.5, 300, 3);
+    ctx.restore();
+
+    // deterministic skyline with lit windows
+    for (let i = -1; i < 26; i++) {
+      const bw = 14 + hash01(i * 13) * 24;
+      const bx = i * 22 - 8;
+      const bh = 14 + hash01(i * 7) * 44;
+      ctx.fillStyle = i % 2 ? "#0B1626" : "#0E1C31";
+      ctx.fillRect(bx, horizon - bh, bw, bh + 1);
+      ctx.fillStyle = "rgba(255,190,100,0.8)";
+      for (let wy = horizon - bh + 3; wy < horizon - 3; wy += 5)
+        for (let wx = bx + 2; wx < bx + bw - 2; wx += 4)
+          if (hash01(((wx * 31 + wy * 17) | 0) % 9973) > 0.74) ctx.fillRect(wx, wy, 1.5, 2);
+    }
+
+    // perspective grid below the horizon
+    ctx.strokeStyle = "rgba(34,211,238,0.28)"; ctx.lineWidth = 1;
     for (let i = 0; i < 12; i++) {
       const y = horizon + Math.pow(i / 12, 2) * (CFG.H - horizon);
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CFG.W, y); ctx.stroke();
@@ -2571,13 +2772,10 @@
       ctx.beginPath(); ctx.moveTo(CFG.W / 2, horizon);
       ctx.lineTo(CFG.W / 2 + i * 80 + scroll, CFG.H); ctx.stroke();
     }
-    ctx.fillStyle = PAL.orange;
-    ctx.beginPath(); ctx.arc(CFG.W / 2, horizon - 6, 30, Math.PI, 0); ctx.fill();
-    ctx.fillStyle = PAL.bg0;
-    for (let i = 0; i < 5; i++) ctx.fillRect(CFG.W / 2 - 30, horizon - 6 + i * 5, 60, 1 + i);
   }
 
   function renderBossBackdrop() {
+    beginFrame();
     Game.frame++;
     ctx.fillStyle = "#05070D"; ctx.fillRect(0, 0, CFG.W, CFG.H);
     // falling data columns: the export stream you are racing
@@ -2595,6 +2793,7 @@
   }
 
   function renderPrologueBackdrop() {
+    beginFrame();
     Game.frame++;
     ctx.fillStyle = PAL.bg0; ctx.fillRect(0, 0, CFG.W, CFG.H);
     // The pump with its plate sits in the lower left; the readable close-up is the
@@ -2649,10 +2848,13 @@
       panel.querySelectorAll("[data-credit]").forEach(a =>
         a.addEventListener("click", () => Tracking.send("contact_click", { from: Game.state })));
     }
+    // Panel-spezifische Overlay-Varianten (z.B. hellerer Scrim auf dem Titelbild)
+    overlay.className = "at-overlay" +
+      (cls ? " at-overlay--" + cls.replace(/^at-panel--/, "") : "");
     overlay.classList.add("at-overlay--visible");
   }
   function hideOverlay() {
-    overlay.classList.remove("at-overlay--visible");
+    overlay.className = "at-overlay";
     panel.innerHTML = "";
   }
 
@@ -2712,12 +2914,12 @@
         <span class="at-keys">F</span> lampe &nbsp;
         <span class="at-keys">1-4</span> antworten
       </p>
-      <button class="at-btn" id="at-start">INSERT COIN / START</button>
+      <button class="at-btn at-btn--start" id="at-start">PRESS START</button>
       <button class="at-btn at-btn--ghost" id="at-skip">PROLOG ÜBERSPRINGEN</button>
       <p class="at-dim" style="margin-top:8px">BESTENLISTE</p>
       <div class="at-hs-list">${hsHTML}</div>
       <p class="at-creditline">GEBASTELT VON ${creditLink()}</p>
-    `);
+    `, "title");
     el("at-start").onclick = () => startRun(true);
     el("at-skip").onclick = () => startRun(false);
   }

@@ -1,6 +1,7 @@
 /* ============================================================
-   AssetTrace: The Handover Quest  -  Retro 80s CRT styling
-   Palette: #0B192C / #1E3A8A (deep blues), #FF6B00 (orange)
+   AssetTrace: The Handover Quest  -  Y2K / late-90s styling
+   Palette: #0B192C / #1E3A8A (deep blues), #FF6B00 (orange),
+   chrome gradients, glass panels, thin cyan codec frames
    ============================================================ */
 
 :root {
@@ -13,6 +14,10 @@
   --at-red:       #EF4444;
   --at-text:      #E2E8F0;
   --at-dim:       #8b98ad;
+  --at-chrome:    linear-gradient(180deg, #ffffff 0%, #cfe0f5 28%, #6d7fa3 48%,
+                                  #243049 52%, #8fa5c9 66%, #e8f1ff 100%);
+  --at-chamfer:   polygon(6px 0, 100% 0, 100% calc(100% - 6px),
+                          calc(100% - 6px) 100%, 0 100%, 0 6px);
   --at-pixel:     Consolas, "DejaVu Sans Mono", "Liberation Mono", Menlo,
                   "Lucida Console", monospace;
 }
@@ -56,10 +61,11 @@ html, body {
   aspect-ratio: 480 / 270;
   max-width: 960px;
   background: #000;
-  border: 2px solid var(--at-orange);
+  border: 1px solid rgba(34, 211, 238, 0.4);
   box-shadow:
-    0 0 0 2px #000,
-    0 0 24px rgba(255, 107, 0, 0.35),
+    0 0 0 1px #000,
+    0 0 28px rgba(255, 107, 0, 0.25),
+    0 0 18px rgba(34, 211, 238, 0.15),
     inset 0 0 32px rgba(0, 0, 0, 0.8);
   overflow: hidden;
 }
@@ -73,7 +79,8 @@ html, body {
   background: var(--at-bg);
 }
 
-/* CRT scanlines + vignette */
+/* CRT scanlines + vignette — late-CRT: finer, gentler, the glow comes from
+   the canvas itself now */
 #at-crt-overlay {
   position: absolute;
   inset: 0;
@@ -83,10 +90,10 @@ html, body {
       to bottom,
       rgba(0, 0, 0, 0) 0px,
       rgba(0, 0, 0, 0) 2px,
-      rgba(0, 0, 0, 0.18) 3px,
-      rgba(0, 0, 0, 0.18) 4px
+      rgba(0, 0, 0, 0.12) 3px,
+      rgba(0, 0, 0, 0.12) 4px
     ),
-    radial-gradient(ellipse at center, rgba(0,0,0,0) 60%, rgba(0,0,0,0.55) 100%);
+    radial-gradient(ellipse at center, rgba(0,0,0,0) 62%, rgba(0,0,0,0.45) 100%);
   mix-blend-mode: multiply;
   z-index: 5;
 }
@@ -101,13 +108,15 @@ html, body {
   font-size: clamp(9px, 2.3vw, 14px);
   font-weight: bold;
   letter-spacing: 0.5px;
-  text-shadow: 1px 1px 0 #000, 2px 2px 0 rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 0 #000, 0 0 8px rgba(34, 211, 238, 0.35);
   z-index: 6;
   pointer-events: none;
 }
 .at-hud-cell {
-  background: rgba(11, 25, 44, 0.7);
-  border: 1px solid var(--at-orange-d);
+  background: linear-gradient(180deg, rgba(23, 44, 77, 0.85), rgba(9, 18, 34, 0.85));
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  clip-path: var(--at-chamfer);
   padding: 2px 6px;
   display: flex;
   flex-direction: column;
@@ -132,6 +141,11 @@ html, body {
   padding: 12px;
 }
 .at-overlay--visible { display: flex; }
+/* Titel: der Scrim lässt die animierte Kulisse (Skyline, Sonne, Datenregen)
+   durchscheinen — die Panels der Spielzustände bleiben dunkler. */
+.at-overlay--title {
+  background: linear-gradient(180deg, rgba(6, 11, 22, 0.28), rgba(6, 11, 22, 0.66));
+}
 
 .at-panel {
   max-width: 94%;
@@ -149,22 +163,38 @@ html, body {
   overscroll-behavior: contain;
   min-width: 0;
 }
+.at-panel--title {
+  background: linear-gradient(180deg, rgba(10, 20, 38, 0.72), rgba(6, 12, 24, 0.82));
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 0 24px rgba(5, 10, 20, 0.6);
+  clip-path: var(--at-chamfer);
+  padding: 10px 18px;
+}
 .at-panel h1 {
   font-size: clamp(16px, 5.2vw, 34px);
   margin: 0 0 4px;
-  color: var(--at-orange);
-  text-shadow:
-    0 0 10px rgba(255, 107, 0, 0.7),
-    3px 3px 0 #000,
-    -1px -1px 0 var(--at-cyan);
   letter-spacing: 2px;
-  animation: at-glow 1.6s ease-in-out infinite alternate;
+  /* Y2K-Chrome: vertikaler Metallverlauf als Füllung plus wandernder Glanz */
+  background-image:
+    linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.85) 50%, transparent 70%),
+    var(--at-chrome);
+  background-size: 300% 100%, 100% 100%;
+  background-position: 120% 0, 0 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.9)) drop-shadow(0 0 10px rgba(34, 211, 238, 0.35));
+  animation: at-chrome-sheen 3.4s linear infinite;
+}
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .at-panel h1 { color: var(--at-orange); background: none; filter: none; }
 }
 .at-panel h2 {
   font-size: clamp(12px, 3.4vw, 20px);
   margin: 6px 0 10px;
   color: var(--at-cyan);
-  text-shadow: 2px 2px 0 #000;
+  letter-spacing: 3px;
+  text-shadow: 0 0 12px rgba(34, 211, 238, 0.5), 2px 2px 0 #000;
 }
 .at-panel p { margin: 4px 0; color: var(--at-text); }
 .at-panel .at-dim { color: var(--at-dim); font-size: 0.9em; }
@@ -217,39 +247,63 @@ html, body {
   font-family: var(--at-pixel);
   font-size: clamp(11px, 3vw, 16px);
   letter-spacing: 2px;
-  color: #0B192C;
-  background: var(--at-orange);
-  border: 2px solid #000;
-  box-shadow: 3px 3px 0 #000, inset 1px 1px 0 rgba(255,255,255,0.35);
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, #FF9E4A 0%, #FF6B00 45%, #D65A00 92%);
+  border: 1px solid #7A3A00;
+  box-shadow:
+    0 0 0 1px #000,
+    0 0 14px rgba(255, 107, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
   padding: 8px 18px;
   margin: 10px 6px 0;
   cursor: pointer;
   text-transform: uppercase;
   font-weight: bold;
-  transition: transform 0.05s;
+  transition: filter 0.08s, box-shadow 0.08s;
   text-decoration: none;          /* the CTA is an <a> — no underline */
   display: inline-block;
 }
-.at-btn:hover { background: var(--at-cyan); }
-.at-btn:active { transform: translate(3px, 3px); box-shadow: 0 0 0 #000; }
+.at-btn:hover {
+  filter: brightness(1.18);
+  box-shadow:
+    0 0 0 1px #000,
+    0 0 22px rgba(255, 150, 60, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.at-btn:active { transform: translateY(1px); }
+.at-btn--start { animation: at-pulse 1.15s ease-in-out infinite; }
 .at-btn--ghost {
-  background: transparent;
+  background: linear-gradient(180deg, rgba(34, 211, 238, 0.14), rgba(34, 211, 238, 0.05));
   color: var(--at-cyan);
-  box-shadow: 3px 3px 0 #000;
+  text-shadow: none;
   border-color: var(--at-cyan);
 }
-.at-btn--ghost:hover { background: rgba(34, 211, 238, 0.12); color: var(--at-cyan); }
+.at-btn--ghost:hover { filter: brightness(1.3); box-shadow: 0 0 0 1px #000, 0 0 16px rgba(34, 211, 238, 0.4); }
 
 /* ============================================================
    Knowledge-task terminal (DIN 276 / Zähler / Prüffrist / ESG)
+   Codec frame: thin cyan border, corner brackets, scan grid
    ============================================================ */
 .at-terminal {
-  border: 2px solid var(--at-orange);
-  background: rgba(11, 25, 44, 0.96);
+  position: relative;
+  border: 1px solid rgba(34, 211, 238, 0.45);
+  background:
+    linear-gradient(180deg, rgba(13, 28, 50, 0.97), rgba(9, 18, 34, 0.97)),
+    repeating-linear-gradient(0deg, rgba(34, 211, 238, 0.04) 0 1px, transparent 1px 3px);
   padding: 8px 12px 10px;
-  box-shadow: 4px 4px 0 #000;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   text-align: left;
 }
+.at-terminal::before, .at-terminal::after {
+  content: "";
+  position: absolute;
+  width: 10px; height: 10px;
+  border: 2px solid var(--at-cyan);
+  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.6));
+}
+.at-terminal::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+.at-terminal::after  { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
 .at-term-head { font-size: 0.85em; margin-bottom: 3px; }
 .at-terminal h2 { margin: 2px 0 6px; text-align: left; }
 .at-ask { margin: 8px 0 6px !important; color: var(--at-orange) !important; }
@@ -294,7 +348,10 @@ html, body {
 }
 .at-timer-fill {
   height: 100%; width: 100%;
-  background: linear-gradient(90deg, var(--at-orange), var(--at-cyan));
+  /* gloss line over the gradient — the 1999 progress bar */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 35%, rgba(255, 255, 255, 0) 35%),
+    linear-gradient(90deg, var(--at-orange), var(--at-cyan));
 }
 
 /* meter digit rolls */
@@ -326,9 +383,10 @@ html, body {
 
 /* the "why" toast — the educational payload */
 .at-explain {
-  border: 2px solid var(--at-cyan);
-  background: rgba(11, 25, 44, 0.97);
-  box-shadow: 4px 4px 0 #000;
+  position: relative;
+  border: 1px solid rgba(34, 211, 238, 0.45);
+  background: linear-gradient(180deg, rgba(13, 28, 50, 0.97), rgba(9, 18, 34, 0.97));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   padding: 12px 16px;
   max-width: 30em;
 }
@@ -469,8 +527,10 @@ html, body {
 .at-cat-g { font-weight: bold; min-width: 1.6em; text-align: right; }
 
 .at-report-block {
-  border: 1px solid var(--at-orange-d);
-  background: rgba(11, 25, 44, 0.6);
+  position: relative;
+  border: 1px solid rgba(34, 211, 238, 0.30);
+  background: linear-gradient(180deg, rgba(15, 30, 52, 0.75), rgba(10, 20, 38, 0.75));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   padding: 6px 10px; margin: 8px 0; text-align: left;
 }
 .at-report-block--bad { border-color: var(--at-red); }
@@ -574,9 +634,13 @@ body.at-touch-device .at-touch {
   animation: at-blink 1s steps(2) infinite;
 }
 
-@keyframes at-glow {
-  from { text-shadow: 0 0 6px rgba(255,107,0,0.5), 3px 3px 0 #000, -1px -1px 0 var(--at-cyan); }
-  to   { text-shadow: 0 0 16px rgba(255,107,0,0.95), 3px 3px 0 #000, -1px -1px 0 var(--at-cyan); }
+@keyframes at-chrome-sheen {
+  from { background-position: 120% 0, 0 0; }
+  to   { background-position: -220% 0, 0 0; }
+}
+@keyframes at-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.28); }
 }
 @keyframes at-blink { 50% { opacity: 0; } }
 @keyframes at-shake {

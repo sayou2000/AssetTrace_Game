@@ -1,6 +1,6 @@
 # AssetTrace: The Handover Quest 🕹️  v2.0
 
-Ein **80er-Retro-Arcade-Spiel** im Browser. Es macht den realen
+Ein **Retro-Arcade-Spiel** im Browser — Pixel-Look, Chrome und Trance-Sound der späten 90er. Es macht den realen
 **Handover Gap** im Facility Management spielbar: der Spieler ist Tech Inspector,
 erfasst Anlagen gegen einen laufenden Übergabetermin und verwandelt visuelle
 Daten in strukturierte, CAFM-fähige FM-Daten.
@@ -38,7 +38,7 @@ nichts. v2.0 macht daraus ein Spiel:
 ```
 AssetTrace_Game/
 ├── index.html          # Game shell: canvas, HUD, overlays, touch controls
-├── style.css           # 80s CRT styling (scanlines, palette, retro UI)
+├── style.css           # Y2K styling (chrome, codec frames, scanlines, retro UI)
 ├── bundle.js           # Full game: engine + audio synth + procedural art + mechanics
 ├── embed.html          # Live demo of iframe + Web Component embed methods
 ├── og-image.png        # 1200x630 Vorschaukarte fürs Teilen (LinkedIn/Slack)

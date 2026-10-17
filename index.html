@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="description" content="AssetTrace: The Handover Quest - 80s Retro-Arcade zum Handover Gap im Facility Management. Typenschilder, Prüffristen, DIN 276, ESG - gegen die Uhr." />
+  <meta name="description" content="AssetTrace: The Handover Quest - Retro-Arcade zum Handover Gap im Facility Management. Typenschilder, Prüffristen, DIN 276, ESG - gegen die Uhr." />
   <title>AssetTrace: The Handover Quest</title>
 
   <!-- ══════════════════════════════════════════════════════════════════════
@@ -46,13 +46,13 @@
        reichte, damit wiederkehrende Besucher dauerhaft die alte Fassung sahen.
        Mitzählen schadet trotzdem nicht: es macht einen Release im Netzwerk-Tab
        sichtbar und umgeht notfalls einen bereits vergifteten Cache-Eintrag. -->
-  <link rel="stylesheet" href="style.css?v=2.1.0" />
+  <link rel="stylesheet" href="style.css?v=2.2.0" />
   <!-- No external fonts: built-in monospace mimics 8-bit terminal feel (zero runtime CDN requests). -->
 </head>
 <body>
   <!--
     AssetTrace: The Handover Quest  v2.0
-    Embeddable, dependency-free 80s retro arcade game.
+    Embeddable, dependency-free retro arcade game (late-90s / Y2K look).
 
     URL params supported:
       ?utm_source=linkedin&utm_campaign=handover
@@ -63,7 +63,7 @@
 
   <div id="at-game-root">
     <div id="at-stage">
-      <canvas id="at-canvas" width="480" height="270" aria-label="AssetTrace The Handover Quest game"></canvas>
+      <canvas id="at-canvas" width="960" height="540" aria-label="AssetTrace The Handover Quest game"></canvas>
 
       <!-- CRT scanline + vignette overlay -->
       <div id="at-crt-overlay" aria-hidden="true"></div>
@@ -118,6 +118,6 @@
     </div>
   </div>
 
-  <script src="bundle.js?v=2.1.0"></script>
+  <script src="bundle.js?v=2.2.0"></script>
 </body>
 </html>
