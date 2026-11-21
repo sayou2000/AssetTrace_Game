@@ -4593,7 +4593,7 @@
   }
 
   function landingURL() {
-    const base = window.ASSETTRACE_LANDING || "https://assettrace.example.com";
+    const base = window.ASSETTRACE_LANDING || "https://app.assetident.com/";
     const q = [];
     if (Tracking.utm.source) q.push("utm_source=" + encodeURIComponent(Tracking.utm.source));
     if (Tracking.utm.campaign) q.push("utm_campaign=" + encodeURIComponent(Tracking.utm.campaign));

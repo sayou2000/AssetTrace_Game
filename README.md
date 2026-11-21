@@ -405,18 +405,18 @@ request is sent with `mode: "no-cors"`, so it works against any analytics
 collector / pixel endpoint without CORS configuration (your server just reads
 the raw body). For richer server-side handling, drop `mode: "no-cors"` in `bundle.js`.
 
-### CTA-Landing-URL setzen — PFLICHT VOR DEM LIVEGANG
+### CTA-Landing-URL
 
-Der CTA „ASSETTRACE LIVE ANSEHEN" auf Report-Seite 2 zeigt auf
-`window.ASSETTRACE_LANDING`. Vorgabe ist die **Beispiel-Domain**
-`https://assettrace.example.com` und damit ein toter Link. Angehängt werden
+Der CTA „ASSETTRACE LIVE ANSEHEN" auf Report-Seite 2 und der QR-Code der
+Belohnungs-Box zeigen auf `window.ASSETTRACE_LANDING`, gesetzt auf
+`https://app.assetident.com/`. Angehängt werden
 `utm_source`, `utm_campaign` und `at_rank=<Rang>`, sodass die Attribution bis zur
 Anmeldung durchläuft — inklusive der Information, wie gut der Besucher gespielt hat.
 
 Die Variable steht im obersten `<script>`-Block von `index.html`:
 
 ```html
-<script>window.ASSETTRACE_LANDING = "https://deine-landingpage.de";</script>
+<script>window.ASSETTRACE_LANDING = "https://app.assetident.com/";</script>
 ```
 
 Warum dort und nicht als Umgebungsvariable: Der Container liefert ausschließlich
