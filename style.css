@@ -1,25 +1,70 @@
 /* ============================================================
-   AssetTrace: The Handover Quest  -  Y2K / late-90s styling
-   Palette: #0B192C / #1E3A8A (deep blues), #FF6B00 (orange),
-   chrome gradients, glass panels, thin cyan codec frames
+   AssetTrace: The Handover Quest  -  "Sunset Neon" styling (v3.3)
+   Miami-Sonnenuntergang / Synthwave: Nachtviolett als Basis,
+   Sunset-Verlauf (Gold → Koralle → Pink) für Titel und Buttons,
+   Neon-Cyan für HUD, Rahmen und alles, was "scannt".
+   Nur Optik — jede Klasse/ID, die bundle.js setzt, bleibt erhalten.
    ============================================================ */
 
+/* ---- Schriften: lokal gehostet (CSP font-src 'self', DSGVO) — siehe fonts/README.md ---- */
+@font-face {
+  font-family: "Anton";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/anton-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url("fonts/inter-latin-var.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Yellowtail";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/yellowtail-latin.woff2") format("woff2");
+}
+
 :root {
-  --at-bg:        #0B192C;
-  --at-bg2:       #1E3A8A;
-  --at-orange:    #FF6B00;
-  --at-orange-d:  #C24E00;
-  --at-cyan:      #22D3EE;
-  --at-green:     #34D399;
-  --at-red:       #EF4444;
-  --at-text:      #E2E8F0;
-  --at-dim:       #8b98ad;
-  --at-chrome:    linear-gradient(180deg, #ffffff 0%, #cfe0f5 28%, #6d7fa3 48%,
-                                  #243049 52%, #8fa5c9 66%, #e8f1ff 100%);
-  --at-chamfer:   polygon(6px 0, 100% 0, 100% calc(100% - 6px),
-                          calc(100% - 6px) 100%, 0 100%, 0 6px);
+  /* Basis */
+  --at-bg:        #140A24;   /* Nachtviolett */
+  --at-bg2:       #1E1035;   /* Indigo für Karten/Panels */
+  --at-bg3:       #3A1D6E;
+  --at-ink:       #0D0618;   /* harter Schlagschatten */
+  /* Sunset */
+  --at-gold:      #FFD15C;
+  --at-coral:     #FF7A59;
+  --at-pink:      #FF3E8A;
+  /* Neon / Status */
+  --at-cyan:      #00F0FF;
+  --at-green:     #3DFFB0;
+  --at-red:       #FF4D5E;
+  --at-yellow:    #FFD15C;
+  --at-text:      #FFFFFF;
+  --at-dim:       #B9A8DB;
+  /* Alias aus v3.2: "orange" war die Akzentfarbe für Werte — jetzt Koralle */
+  --at-orange:    var(--at-coral);
+  --at-orange-d:  #A8366F;
+
+  --at-sunset:    linear-gradient(180deg, #FFD15C 0%, #FF9A4F 38%, #FF7A59 55%, #FF3E8A 100%);
+  --at-sunset-x:  linear-gradient(90deg, #FFD15C 0%, #FF7A59 50%, #FF3E8A 100%);
+  --at-frame:     linear-gradient(135deg, #FFD15C, #FF3E8A 55%, #00F0FF);
+
+  --at-display:   "Anton", Impact, "Arial Narrow Bold", "Helvetica Neue", sans-serif;
+  --at-ui:        "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --at-script:    "Yellowtail", "Brush Script MT", cursive;
   --at-pixel:     Consolas, "DejaVu Sans Mono", "Liberation Mono", Menlo,
                   "Lucida Console", monospace;
+
+  --at-outline:   1.5px 0 0 var(--at-ink), -1.5px 0 0 var(--at-ink),
+                  0 1.5px 0 var(--at-ink), 0 -1.5px 0 var(--at-ink),
+                  1.5px 1.5px 0 var(--at-ink), -1.5px 1.5px 0 var(--at-ink),
+                  1.5px -1.5px 0 var(--at-ink), -1.5px -1.5px 0 var(--at-ink),
+                  2.5px 2.5px 0 var(--at-ink);
 }
 
 * { box-sizing: border-box; }
@@ -27,19 +72,19 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: #05070D;
+  background: #0A0514;
   color: var(--at-text);
-  font-family: var(--at-pixel);
+  font-family: var(--at-ui);
   overflow: hidden;
   height: 100%;
-  /* The retro pixel look now comes from the real bitmap font on the canvas, so the
-     DOM panels are allowed to be smooth and readable instead of hard-aliased. */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
 }
+/* ?retro=1: der Arcade-Gag bekommt auch seine Terminal-Schrift zurück */
+body.at-retro { font-family: var(--at-pixel); }
 
 #at-game-root {
   position: fixed;
@@ -51,7 +96,8 @@ html, body {
   gap: 8px;
   padding: 8px;
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(30, 58, 138, 0.45) 0%, rgba(11, 25, 44, 0.85) 55%, #05070D 100%);
+    radial-gradient(ellipse 80% 45% at 50% 100%, rgba(255, 62, 138, 0.28) 0%, rgba(255, 122, 89, 0.10) 40%, transparent 70%),
+    radial-gradient(ellipse at 50% 0%, rgba(58, 29, 110, 0.55) 0%, rgba(20, 10, 36, 0.9) 55%, #0A0514 100%);
 }
 
 /* ---- Stage / canvas wrapper ---- */
@@ -61,11 +107,11 @@ html, body {
   aspect-ratio: 480 / 270;
   max-width: 960px;
   background: #000;
-  border: 1px solid rgba(34, 211, 238, 0.4);
+  border: 1px solid rgba(255, 62, 138, 0.55);
   box-shadow:
-    0 0 0 1px #000,
-    0 0 28px rgba(255, 107, 0, 0.25),
-    0 0 18px rgba(34, 211, 238, 0.15),
+    0 0 0 1px var(--at-ink),
+    0 0 32px rgba(255, 62, 138, 0.28),
+    0 0 18px rgba(0, 240, 255, 0.14),
     inset 0 0 32px rgba(0, 0, 0, 0.8);
   overflow: hidden;
 }
@@ -89,7 +135,7 @@ body.at-retro #at-canvas {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse at center, rgba(0,0,0,0) 62%, rgba(0,0,0,0.32) 100%);
+    radial-gradient(ellipse at center, rgba(0,0,0,0) 62%, rgba(13,6,24,0.36) 100%);
   z-index: 5;
 }
 body.at-retro #at-crt-overlay {
@@ -105,7 +151,8 @@ body.at-retro #at-crt-overlay {
   mix-blend-mode: multiply;
 }
 
-/* ---- HUD ---- */
+/* ---- HUD: kein Kasten-Look mehr — dicke Ziffern mit harter Kontur,
+        lesbar auf jedem Hintergrund, wie eine Spiel-Anzeige über dem Bild ---- */
 .at-hud {
   position: absolute;
   top: 6px; left: 6px; right: 6px;
@@ -113,27 +160,48 @@ body.at-retro #at-crt-overlay {
   justify-content: space-between;
   gap: 6px;
   font-size: clamp(9px, 2.3vw, 14px);
-  font-weight: bold;
-  letter-spacing: 0.5px;
-  text-shadow: 1px 1px 0 #000, 0 0 8px rgba(34, 211, 238, 0.35);
   z-index: 6;
   pointer-events: none;
 }
 .at-hud-cell {
-  background: linear-gradient(180deg, rgba(23, 44, 77, 0.85), rgba(9, 18, 34, 0.85));
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  clip-path: var(--at-chamfer);
-  padding: 2px 6px;
+  background: linear-gradient(90deg, rgba(13, 6, 24, 0.70), rgba(13, 6, 24, 0.25));
+  border-left: 2px solid var(--at-cyan);
+  box-shadow: -4px 0 10px -6px rgba(0, 240, 255, 0.8);
+  padding: 1px 8px 2px 6px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   min-width: 52px;
-  line-height: 1.1;
+  line-height: 1.05;
 }
-.at-label { color: var(--at-cyan); font-size: 0.8em; font-weight: normal; }
-#at-level, #at-score, #at-data, #at-qual, #at-time { color: var(--at-orange); font-weight: bold; }
-.at-hud-cell--time { border-color: var(--at-orange); min-width: 68px; }
+.at-label {
+  color: var(--at-cyan);
+  font-family: var(--at-ui);
+  font-size: 0.68em;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-shadow: 0 1px 0 var(--at-ink);
+}
+#at-level, #at-score, #at-data, #at-qual, #at-time {
+  font-family: var(--at-display);
+  font-weight: 400;
+  font-size: 1.32em;
+  letter-spacing: 1px;
+  color: var(--at-text);
+  text-shadow: var(--at-outline);
+}
+#at-score { color: var(--at-green); }        /* Spiel-"Geld": Punkte in Neon-Grün */
+#at-level { color: var(--at-gold); }
+.at-hud-cell--time {
+  border-left-color: var(--at-pink);
+  box-shadow: -4px 0 10px -6px rgba(255, 62, 138, 0.9);
+  min-width: 68px;
+  align-items: flex-end;
+}
+.at-hud-cell--time .at-label { color: var(--at-pink); }
+#at-time { font-size: 1.5em; }
+body.at-retro #at-level, body.at-retro #at-score, body.at-retro #at-data,
+body.at-retro #at-qual, body.at-retro #at-time { font-family: var(--at-pixel); font-weight: bold; font-size: 1em; }
 
 /* ---- Overlays (title / win / classification) ---- */
 .at-overlay {
@@ -142,28 +210,27 @@ body.at-retro #at-crt-overlay {
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(5, 7, 13, 0.86);
+  background: rgba(13, 6, 24, 0.86);
   z-index: 8;
   text-align: center;
   padding: 12px;
 }
 .at-overlay--visible { display: flex; }
-/* Titel: der Scrim lässt die animierte Kulisse (Skyline, Sonne, Datenregen)
+/* Titel: der Scrim lässt die animierte Kulisse (Sonne, Palmen, Skyline)
    durchscheinen — die Panels der Spielzustände bleiben dunkler. */
 .at-overlay--title {
-  background: linear-gradient(180deg, rgba(6, 11, 22, 0.28), rgba(6, 11, 22, 0.66));
+  background: linear-gradient(180deg, rgba(20, 10, 36, 0.22), rgba(13, 6, 24, 0.62));
 }
 
 .at-panel {
   max-width: 94%;
   font-size: clamp(11px, 2.8vw, 16px);
   line-height: 1.5;
-  letter-spacing: 0.5px;
-  /* Die Bühne ist starr 16:9, ihre Höhe hängt also an der Breite. Gemessen bei
-     500 px Layoutbreite: Bühne 480x270, Panel 425x242 — der Titelinhalt braucht
-     313 px. Ohne das hier wurde er oben und unten abgeschnitten, samt Titel und
-     Startknopf. Horizontal gibt es keinen Überlauf (nachgemessen), overflow-x
-     bleibt trotzdem hidden, damit overflow-y kein Scrollen quer erlaubt. */
+  letter-spacing: 0.2px;
+  /* Die Bühne ist starr 16:9, ihre Höhe hängt also an der Breite. Ohne max-height
+     wurde der Titelinhalt auf schmalen Bühnen oben und unten abgeschnitten, samt
+     Titel und Startknopf. overflow-x bleibt hidden, damit overflow-y kein
+     Scrollen quer erlaubt. */
   max-height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
@@ -171,51 +238,140 @@ body.at-retro #at-crt-overlay {
   min-width: 0;
 }
 .at-panel--title {
-  background: linear-gradient(180deg, rgba(10, 20, 38, 0.72), rgba(6, 12, 24, 0.82));
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 0 24px rgba(5, 10, 20, 0.6);
-  clip-path: var(--at-chamfer);
-  padding: 10px 18px;
+  background: linear-gradient(180deg, rgba(30, 16, 53, 0.80), rgba(20, 10, 36, 0.88));
+  border: 1px solid transparent;
+  border-image: var(--at-frame) 1;
+  box-shadow: 0 0 28px rgba(255, 62, 138, 0.25), 0 0 24px rgba(13, 6, 24, 0.6);
+  padding: 10px 20px 12px;
 }
 .at-panel h1 {
-  font-size: clamp(16px, 5.2vw, 34px);
-  margin: 0 0 4px;
-  letter-spacing: 2px;
-  /* Y2K-Chrome: vertikaler Metallverlauf als Füllung plus wandernder Glanz */
-  background-image:
-    linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.85) 50%, transparent 70%),
-    var(--at-chrome);
-  background-size: 300% 100%, 100% 100%;
-  background-position: 120% 0, 0 0;
+  font-family: var(--at-display);
+  font-weight: 400;
+  font-size: clamp(22px, 6.4vw, 46px);
+  line-height: 1.02;
+  /* padding-top: background-clip:text färbt nur innerhalb der Box — ohne Luft
+     oben verschwanden die Ü-Punkte ("UBERGABE") */
+  padding: 0.14em 0.06em 0.02em;
+  margin: 0 0 2px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background-image: var(--at-sunset);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.9)) drop-shadow(0 0 10px rgba(34, 211, 238, 0.35));
-  animation: at-chrome-sheen 3.4s linear infinite;
+  filter: drop-shadow(3px 3px 0 var(--at-ink)) drop-shadow(0 0 14px rgba(255, 62, 138, 0.45));
 }
 @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
-  .at-panel h1 { color: var(--at-orange); background: none; filter: none; }
+  .at-panel h1 { color: var(--at-coral); background: none; }
 }
 .at-panel h2 {
-  font-size: clamp(12px, 3.4vw, 20px);
-  margin: 6px 0 10px;
+  font-family: var(--at-display);
+  font-weight: 400;
+  font-size: clamp(14px, 3.8vw, 24px);
+  margin: 6px 0 8px;
   color: var(--at-cyan);
-  letter-spacing: 3px;
-  text-shadow: 0 0 12px rgba(34, 211, 238, 0.5), 2px 2px 0 #000;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 var(--at-ink), 0 0 14px rgba(0, 240, 255, 0.45);
 }
 .at-panel p { margin: 4px 0; color: var(--at-text); }
 .at-panel .at-dim { color: var(--at-dim); font-size: 0.9em; }
-.at-panel .at-orange { color: var(--at-orange); }
+.at-panel .at-orange { color: var(--at-coral); font-weight: 700; }
 .at-panel .at-green  { color: var(--at-green); }
 .at-panel .at-cyan   { color: var(--at-cyan); }
 .at-panel .at-red    { color: var(--at-red); }
-.at-panel .at-yellow { color: #FACC15; }
+.at-panel .at-yellow { color: var(--at-yellow); }
 .at-tiny { font-size: 0.85em; line-height: 1.45; }
-.at-h1-fail { color: var(--at-red) !important; }
+.at-h1-fail {
+  background-image: linear-gradient(180deg, #FF9AA4 0%, var(--at-red) 60%, #B3123A 100%) !important;
+}
+
+/* "NEUER AUFTRAG" — schräges Cyan-Etikett über dem Titel */
+.at-kicker {
+  display: inline-block;
+  font-family: var(--at-ui);
+  font-weight: 800;
+  font-size: 0.74em;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--at-ink) !important;
+  background: var(--at-cyan);
+  padding: 1px 10px;
+  margin: 2px 0 4px !important;
+  transform: skewX(-12deg);
+  box-shadow: 3px 3px 0 var(--at-ink), 0 0 14px rgba(0, 240, 255, 0.55);
+}
+.at-kicker--bad { background: var(--at-red); box-shadow: 3px 3px 0 var(--at-ink), 0 0 14px rgba(255, 77, 94, 0.55); }
+.at-kicker--good { background: var(--at-green); box-shadow: 3px 3px 0 var(--at-ink), 0 0 14px rgba(61, 255, 176, 0.55); }
+
+/* Tastatur-Hinweise sind auf Touch-Geräten nutzlos und kosten auf der
+   kleinen Hochformat-Bühne die Zeilen, die der Startknopf braucht */
+body.at-touch-device .at-keyhint { display: none; }
+
+/* Neon-Schreibschrift — nur Deko, nie für Information */
+.at-script {
+  font-family: var(--at-script);
+  font-size: clamp(18px, 4.6vw, 32px);
+  line-height: 1.1;
+  margin: 0 0 6px !important;
+  color: #FFE6F1 !important;
+  letter-spacing: 0.5px;
+  transform: rotate(-3deg);
+  text-shadow: 0 0 4px #FF3E8A, 0 0 12px #FF3E8A, 0 0 24px rgba(255, 62, 138, 0.7), 2px 2px 0 var(--at-ink);
+}
+body.at-retro .at-script { font-family: var(--at-pixel); font-size: 1em; transform: none; }
+
+/* Ziele (= die 3 Ebenen) mit Neon-Checkboxen — reine Anzeige */
+.at-goals {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 14px;
+  margin: 6px 0 2px;
+  padding: 4px 12px;
+  border-top: 1px solid rgba(0, 240, 255, 0.25);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.25);
+  font-size: 0.86em;
+}
+.at-goals-h {
+  margin: 0 !important;
+  font-family: var(--at-display);
+  letter-spacing: 2px;
+  color: var(--at-gold) !important;
+}
+.at-goal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--at-text);
+}
+.at-check {
+  position: relative;
+  width: 1em; height: 1em;
+  border: 2px solid var(--at-cyan);
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.6), inset 0 0 4px rgba(0, 240, 255, 0.35);
+  flex: 0 0 auto;
+}
+.at-goal--done { color: var(--at-dim); text-decoration: line-through; text-decoration-color: var(--at-cyan); }
+.at-goal--done .at-check { background: var(--at-cyan); }
+.at-goal--done .at-check::after {
+  content: "";
+  position: absolute;
+  left: 0.26em; top: 0.02em;
+  width: 0.26em; height: 0.52em;
+  border: solid var(--at-ink);
+  border-width: 0 0.14em 0.14em 0;
+  transform: rotate(45deg);
+}
 
 /* Long panels: the content scrolls, the action row stays pinned. Without this the
    "next" button and the CTA slip below the fold of a 16:9 stage on small windows. */
-.at-panel--task { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+/* padding: die Neon-Ecken der Karte ragen 2 px heraus — ohne Luft entstand ein
+   Scrollbalken für genau diesen einen Pixel */
+.at-panel--task, .at-panel--explain { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 3px; }
 .at-panel--report {
   max-height: 100%;
   display: flex;
@@ -231,89 +387,95 @@ body.at-retro #at-crt-overlay {
 }
 .at-rep-foot {
   flex: 0 0 auto;
-  border-top: 1px solid var(--at-orange-d);
+  border-top: 1px solid transparent;
+  border-image: var(--at-sunset-x) 1;
   margin-top: 6px;
   padding-top: 2px;
 }
 .at-rep-foot .at-btn { margin-top: 8px; }
 .at-rep-body::-webkit-scrollbar { width: 6px; }
-.at-rep-body::-webkit-scrollbar-thumb { background: var(--at-orange-d); }
+.at-rep-body::-webkit-scrollbar-thumb { background: var(--at-pink); }
 .at-rep-body::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
 
 .at-keys {
   display: inline-block;
-  border: 1px solid var(--at-orange);
-  padding: 1px 5px;
+  border: 1px solid var(--at-cyan);
+  padding: 0 5px;
   margin: 0 1px;
-  color: var(--at-orange);
-  background: rgba(255, 107, 0, 0.08);
-  font-size: 0.9em;
+  color: var(--at-cyan);
+  background: rgba(0, 240, 255, 0.08);
+  font-size: 0.85em;
+  font-weight: 700;
+  box-shadow: 2px 2px 0 var(--at-ink);
 }
 
+/* Buttons: schräg, Sunset-Verlauf, harter Schatten, Glow beim Hover */
 .at-btn {
-  font-family: var(--at-pixel);
-  font-size: clamp(11px, 3vw, 16px);
-  letter-spacing: 2px;
-  color: #fff;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
-  background: linear-gradient(180deg, #FF9E4A 0%, #FF6B00 45%, #D65A00 92%);
-  border: 1px solid #7A3A00;
-  box-shadow:
-    0 0 0 1px #000,
-    0 0 14px rgba(255, 107, 0, 0.30),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55);
-  padding: 8px 18px;
+  font-family: var(--at-display);
+  font-weight: 400;
+  font-size: clamp(12px, 3.1vw, 18px);
+  letter-spacing: 1.8px;
+  color: var(--at-ink);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  background: var(--at-sunset-x);
+  border: 0;
+  box-shadow: 4px 4px 0 var(--at-ink), 0 0 16px rgba(255, 62, 138, 0.35);
+  padding: 7px 20px 6px;
   margin: 10px 6px 0;
   cursor: pointer;
   text-transform: uppercase;
-  font-weight: bold;
-  transition: filter 0.08s, box-shadow 0.08s;
+  transform: skewX(-10deg);
+  transition: filter 0.08s, box-shadow 0.08s, transform 0.08s;
   text-decoration: none;          /* the CTA is an <a> — no underline */
   display: inline-block;
 }
-.at-btn:hover {
-  filter: brightness(1.18);
-  box-shadow:
-    0 0 0 1px #000,
-    0 0 22px rgba(255, 150, 60, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+.at-btn:hover, .at-btn:focus-visible {
+  filter: brightness(1.12) saturate(1.1);
+  box-shadow: 4px 4px 0 var(--at-ink), 0 0 26px rgba(255, 62, 138, 0.7), 0 0 10px rgba(255, 209, 92, 0.6);
+  outline: none;
 }
-.at-btn:active { transform: translateY(1px); }
+.at-btn:active { transform: skewX(-10deg) translate(2px, 2px); box-shadow: 2px 2px 0 var(--at-ink); }
+.at-btn:disabled { filter: grayscale(0.7) brightness(0.7); cursor: default; }
 .at-btn--start { animation: at-pulse 1.15s ease-in-out infinite; }
 .at-btn--ghost {
-  background: linear-gradient(180deg, rgba(34, 211, 238, 0.14), rgba(34, 211, 238, 0.05));
+  background: rgba(30, 16, 53, 0.85);
   color: var(--at-cyan);
   text-shadow: none;
-  border-color: var(--at-cyan);
+  box-shadow: inset 0 0 0 1.5px var(--at-cyan), 4px 4px 0 var(--at-ink);
 }
-.at-btn--ghost:hover { filter: brightness(1.3); box-shadow: 0 0 0 1px #000, 0 0 16px rgba(34, 211, 238, 0.4); }
+.at-btn--ghost:hover, .at-btn--ghost:focus-visible {
+  filter: none;
+  background: rgba(0, 240, 255, 0.14);
+  box-shadow: inset 0 0 0 1.5px var(--at-cyan), 4px 4px 0 var(--at-ink), 0 0 18px rgba(0, 240, 255, 0.5);
+}
+body.at-retro .at-btn { font-family: var(--at-pixel); font-weight: bold; }
 
 /* ============================================================
    Knowledge-task terminal (DIN 276 / Zähler / Prüffrist / ESG)
-   Codec frame: thin cyan border, corner brackets, scan grid
+   Scan-Rahmen: dünne Cyan-Kante, Neon-Ecken, Rasterlinien
    ============================================================ */
 .at-terminal {
   position: relative;
-  border: 1px solid rgba(34, 211, 238, 0.45);
+  border: 1px solid rgba(0, 240, 255, 0.45);
   background:
-    linear-gradient(180deg, rgba(13, 28, 50, 0.97), rgba(9, 18, 34, 0.97)),
-    repeating-linear-gradient(0deg, rgba(34, 211, 238, 0.04) 0 1px, transparent 1px 3px);
+    linear-gradient(180deg, rgba(30, 16, 53, 0.97), rgba(20, 10, 36, 0.97)),
+    repeating-linear-gradient(0deg, rgba(0, 240, 255, 0.04) 0 1px, transparent 1px 3px);
   padding: 8px 12px 10px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 22px rgba(0, 240, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   text-align: left;
 }
 .at-terminal::before, .at-terminal::after {
   content: "";
   position: absolute;
-  width: 10px; height: 10px;
+  width: 12px; height: 12px;
   border: 2px solid var(--at-cyan);
-  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.6));
+  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.8));
 }
 .at-terminal::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
 .at-terminal::after  { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
-.at-term-head { font-size: 0.85em; margin-bottom: 3px; }
+.at-term-head { font-size: 0.8em; font-weight: 700; letter-spacing: 1px; margin-bottom: 3px; }
 .at-terminal h2 { margin: 2px 0 6px; text-align: left; }
-.at-ask { margin: 8px 0 6px !important; color: var(--at-orange) !important; }
+.at-ask { margin: 8px 0 6px !important; color: var(--at-gold) !important; font-weight: 700; }
 
 /* AI-extracted nameplate fields */
 .at-fields {
@@ -328,37 +490,37 @@ body.at-retro #at-crt-overlay {
 .at-fields > div { display: flex; justify-content: space-between; gap: 8px; }
 
 /* answer options */
-.at-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.at-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .at-opts--2 { grid-template-columns: 1fr 1fr; }
 .at-opt {
-  font-family: var(--at-pixel);
+  font-family: var(--at-ui);
   font-size: clamp(11px, 2.5vw, 14px);
+  font-weight: 600;
   text-align: left;
   color: var(--at-text);
-  background: rgba(30, 58, 138, 0.35);
-  border: 1px solid var(--at-cyan);
-  box-shadow: 2px 2px 0 #000;
+  background: rgba(58, 29, 110, 0.45);
+  border: 1px solid rgba(0, 240, 255, 0.7);
+  box-shadow: 3px 3px 0 var(--at-ink);
   padding: 6px 8px;
   cursor: pointer;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.2px;
 }
-.at-opt b { color: var(--at-orange); margin-right: 5px; }
-.at-opt:hover { background: var(--at-cyan); color: #0B192C; }
-.at-opt:hover b { color: #0B192C; }
-.at-opt:active { transform: translate(2px, 2px); box-shadow: 0 0 0 #000; }
+.at-opt b { font-family: var(--at-display); font-weight: 400; color: var(--at-pink); margin-right: 6px; }
+.at-opt:hover, .at-opt:focus-visible { background: var(--at-cyan); color: var(--at-ink); outline: none; box-shadow: 3px 3px 0 var(--at-ink), 0 0 16px rgba(0, 240, 255, 0.6); }
+.at-opt:hover b, .at-opt:focus-visible b { color: var(--at-ink); }
+.at-opt:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--at-ink); }
+body.at-retro .at-opt { font-family: var(--at-pixel); font-weight: normal; }
 
 .at-timer-bar {
   height: 6px; width: 100%;
-  background: #1b2a44; margin-top: 8px;
+  background: #241243; margin-top: 8px;
   border: 1px solid var(--at-orange-d);
   overflow: hidden;
 }
 .at-timer-fill {
   height: 100%; width: 100%;
-  /* gloss line over the gradient — the 1999 progress bar */
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0 35%, rgba(255, 255, 255, 0) 35%),
-    linear-gradient(90deg, var(--at-orange), var(--at-cyan));
+  background: var(--at-sunset-x);   /* bundle.js überschreibt inline (Farbwechsel bei Restzeit) */
+  box-shadow: 0 0 8px rgba(255, 62, 138, 0.8);
 }
 
 /* meter digit rolls */
@@ -367,56 +529,59 @@ body.at-retro #at-crt-overlay {
   margin: 6px 0; justify-content: center;
 }
 .at-roll {
-  background: #0B0F18; color: #E2E8F0;
-  border: 1px solid #6b82a8;
+  font-family: var(--at-display);
+  background: #0D0618; color: #FFFFFF;
+  border: 1px solid #6E5AA0;
   font-size: clamp(14px, 4vw, 22px);
   width: 1.1em; text-align: center;
   box-shadow: inset 0 -3px 6px rgba(0,0,0,0.7), inset 0 3px 4px rgba(255,255,255,0.12);
 }
-.at-roll--red { background: #7f1d1d; border-color: var(--at-red); }
+.at-roll--red { background: #7a1031; border-color: var(--at-red); }
 .at-unit { color: var(--at-cyan); margin-left: 6px; font-size: 0.9em; }
 
 /* inspection sticker */
 .at-plate {
   display: inline-flex; flex-direction: column; align-items: center;
-  border: 3px solid #0B192C;
+  border: 3px solid var(--at-ink);
   background: repeating-conic-gradient(#FACC15 0% 25%, #f59e0b 0% 50%) 50% / 12px 12px;
-  color: #0B192C;
+  color: var(--at-ink);
   padding: 4px 14px; margin: 6px auto; border-radius: 50%;
   min-width: 108px;
 }
-.at-plate-top, .at-plate-bot { font-size: 0.62em; letter-spacing: 0; }
-.at-plate-date { font-size: 1.5em; font-weight: bold; letter-spacing: 1px; }
+.at-plate-top, .at-plate-bot { font-size: 0.62em; letter-spacing: 0; font-weight: 700; }
+.at-plate-date { font-size: 1.5em; font-weight: 800; letter-spacing: 1px; }
 
 /* the "why" toast — the educational payload */
 .at-explain {
   position: relative;
-  border: 1px solid rgba(34, 211, 238, 0.45);
-  background: linear-gradient(180deg, rgba(13, 28, 50, 0.97), rgba(9, 18, 34, 0.97));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  background: linear-gradient(180deg, rgba(30, 16, 53, 0.97), rgba(20, 10, 36, 0.97));
+  box-shadow: 0 0 22px rgba(0, 240, 255, 0.12);
   padding: 12px 16px;
   max-width: 30em;
 }
-.at-explain--ok  { border-color: var(--at-green); }
-.at-explain--ok h2 { color: var(--at-green); }
-.at-explain--bad { border-color: var(--at-red); }
-.at-explain--bad h2 { color: var(--at-red); }
+.at-explain--ok  { border-color: var(--at-green); box-shadow: 0 0 22px rgba(61, 255, 176, 0.2); }
+.at-explain--ok h2 { color: var(--at-green); text-shadow: 2px 2px 0 var(--at-ink), 0 0 14px rgba(61, 255, 176, 0.5); }
+.at-explain--bad { border-color: var(--at-red); box-shadow: 0 0 22px rgba(255, 77, 94, 0.22); }
+.at-explain--bad h2 { color: var(--at-red); text-shadow: 2px 2px 0 var(--at-ink), 0 0 14px rgba(255, 77, 94, 0.5); }
 
 /* ============================================================
    Prologue: manual typing
    ============================================================ */
 .at-serial {
+  font-family: var(--at-pixel);
   font-size: clamp(18px, 6vw, 34px);
   letter-spacing: 4px;
-  background: #000;
-  border: 2px solid var(--at-orange);
+  background: var(--at-ink);
+  border: 2px solid var(--at-pink);
+  box-shadow: 0 0 14px rgba(255, 62, 138, 0.35);
   padding: 6px 12px;
   margin: 8px auto;
   display: inline-block;
 }
 .at-serial .at-s-ok   { color: var(--at-green); }
-.at-serial .at-s-cur  { color: var(--at-orange); animation: at-blink 0.6s steps(2) infinite; }
-.at-serial .at-s-todo { color: #334155; }
+.at-serial .at-s-cur  { color: var(--at-gold); animation: at-blink 0.6s steps(2) infinite; }
+.at-serial .at-s-todo { color: #43356a; }
 .at-shake { animation: at-shake 0.18s linear 2; border-color: var(--at-red) !important; }
 
 /* the nameplate the player copies from — must stay legible at every size */
@@ -429,6 +594,7 @@ body.at-retro #at-crt-overlay {
   padding: 6px 14px;
   margin: 8px auto 4px;
   text-align: left;
+  font-family: var(--at-pixel);
   font-size: 0.95em;
   min-width: 15em;
 }
@@ -450,7 +616,7 @@ body.at-retro #at-crt-overlay {
    ============================================================ */
 .at-creditline {
   margin-top: 10px !important;
-  font-size: 0.8em;
+  font-size: 0.78em;
   color: var(--at-dim);
   letter-spacing: 1px;
 }
@@ -466,7 +632,7 @@ body.at-retro #at-crt-overlay {
   color: var(--at-cyan);
   border-bottom-style: solid;
 }
-/* LinkedIn-Kürzel als kleine Terminal-Kachel statt fremdem Markenlogo */
+/* LinkedIn-Kürzel als kleine Kachel statt fremdem Markenlogo */
 .at-in {
   display: inline-block;
   border: 1px solid currentColor;
@@ -477,19 +643,19 @@ body.at-retro #at-crt-overlay {
   text-transform: lowercase;
   font-weight: bold;
 }
-.at-credit:hover .at-in { background: var(--at-cyan); color: #0B192C; }
+.at-credit:hover .at-in { background: var(--at-cyan); color: var(--at-ink); }
 
 .at-keypad {
   display: grid; grid-template-columns: repeat(5, 1fr);
-  gap: 5px; max-width: 260px; margin: 8px auto 0;
+  gap: 6px; max-width: 260px; margin: 8px auto 0;
 }
 .at-key {
-  font-family: var(--at-pixel); font-size: 18px; font-weight: bold;
-  color: var(--at-orange); background: rgba(11,25,44,0.9);
-  border: 2px solid var(--at-orange-d); box-shadow: 2px 2px 0 #000;
+  font-family: var(--at-display); font-size: 18px;
+  color: var(--at-gold); background: rgba(30, 16, 53, 0.92);
+  border: 2px solid var(--at-orange-d); box-shadow: 3px 3px 0 var(--at-ink);
   padding: 8px 0; cursor: pointer; touch-action: manipulation;
 }
-.at-key:active { background: var(--at-orange); color: #0B192C; }
+.at-key:active { background: var(--at-gold); color: var(--at-ink); }
 
 /* ============================================================
    Briefing / level complete / report
@@ -498,10 +664,11 @@ body.at-retro #at-crt-overlay {
   display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 8px; margin: 10px 0 4px;
   font-size: 0.85em;
-  border-top: 1px solid var(--at-orange-d);
-  border-bottom: 1px solid var(--at-orange-d);
+  border-top: 1px solid rgba(255, 62, 138, 0.45);
+  border-bottom: 1px solid rgba(255, 62, 138, 0.45);
   padding: 6px 0;
 }
+.at-brief-grid .at-orange { font-family: var(--at-display); font-weight: 400; font-size: 1.3em; letter-spacing: 1px; color: var(--at-gold); }
 
 .at-rankrow {
   display: flex; align-items: center; justify-content: center; gap: 14px;
@@ -509,19 +676,22 @@ body.at-retro #at-crt-overlay {
 }
 .at-rankmeta { text-align: left; font-size: 0.88em; }
 .at-badge {
-  display: inline-block; font-weight: bold;
+  display: inline-block;
+  font-family: var(--at-display); font-weight: 400;
   border: 2px solid currentColor; padding: 0 5px; margin: 0 5px;
   font-size: 0.85em;
 }
 .at-badge--big {
-  font-size: clamp(28px, 9vw, 56px);
-  padding: 2px 16px; margin: 0;
-  box-shadow: 4px 4px 0 #000;
+  font-size: clamp(30px, 9vw, 60px);
+  line-height: 1.1;
+  padding: 2px 18px; margin: 0;
+  box-shadow: 5px 5px 0 var(--at-ink), 0 0 20px currentColor;
+  transform: skewX(-8deg);
 }
-.at-badge--S { color: #FACC15; text-shadow: 0 0 12px rgba(250,204,21,0.8); }
+.at-badge--S { color: var(--at-gold); text-shadow: 0 0 14px rgba(255, 209, 92, 0.9); }
 .at-badge--A { color: var(--at-green); }
 .at-badge--B { color: var(--at-cyan); }
-.at-badge--C { color: var(--at-orange); }
+.at-badge--C { color: var(--at-coral); }
 .at-badge--D { color: var(--at-red); }
 
 .at-cats {
@@ -530,34 +700,62 @@ body.at-retro #at-crt-overlay {
   margin: 4px 0 8px;
 }
 .at-cat { display: flex; justify-content: space-between; gap: 6px;
-  border-bottom: 1px dotted #1f2b44; }
-.at-cat-g { font-weight: bold; min-width: 1.6em; text-align: right; }
+  border-bottom: 1px dotted #3b2a5e; }
+.at-cat-g { font-family: var(--at-display); font-weight: 400; min-width: 1.6em; text-align: right; }
 
 .at-report-block {
   position: relative;
-  border: 1px solid rgba(34, 211, 238, 0.30);
-  background: linear-gradient(180deg, rgba(15, 30, 52, 0.75), rgba(10, 20, 38, 0.75));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(0, 240, 255, 0.30);
+  background: linear-gradient(180deg, rgba(30, 16, 53, 0.78), rgba(20, 10, 36, 0.78));
   padding: 6px 10px; margin: 8px 0; text-align: left;
 }
 .at-report-block--bad { border-color: var(--at-red); }
-.at-report-block--sell { border-color: var(--at-cyan); }
+.at-report-block--sell { border-color: var(--at-cyan); box-shadow: 0 0 18px rgba(0, 240, 255, 0.12); }
 .at-list { font-size: 0.88em; line-height: 1.5; max-height: 8em; overflow-y: auto; }
-.at-list > div { border-bottom: 1px dotted #1f2b44; }
+.at-list > div { border-bottom: 1px dotted #3b2a5e; }
 
 .at-compare {
   display: flex; align-items: center; justify-content: center;
   gap: 10px; font-size: 0.92em; text-align: center; margin: 8px 0;
 }
 .at-compare > div { flex: 1; }
-.at-arrow { flex: 0 0 auto !important; color: var(--at-orange); font-size: 1.6em; }
+.at-arrow { flex: 0 0 auto !important; color: var(--at-pink); font-size: 1.6em; }
+
+/* Belohnungs-Box mit QR-Code — nur am großen Bildschirm (Messe-Monitor).
+   Auf dem Handy wäre ein QR sinnlos, dort reicht der CTA-Button. */
+.at-reward {
+  display: none;
+  align-items: center;
+  gap: 14px;
+  margin: 10px 0;
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid transparent;
+  border-image: var(--at-frame) 1;
+  background: linear-gradient(90deg, rgba(255, 62, 138, 0.14), rgba(30, 16, 53, 0.85));
+}
+.at-reward-txt { flex: 1 1 auto; }
+.at-reward-txt p { margin: 2px 0; }
+.at-qr {
+  flex: 0 0 auto;
+  width: 112px; height: 112px;
+  background: #fff;
+  padding: 4px;
+  box-shadow: 4px 4px 0 var(--at-ink), 0 0 18px rgba(0, 240, 255, 0.5);
+}
+.at-qr svg { display: block; width: 100%; height: 100%; }
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+  .at-reward { display: flex; }
+}
 
 .at-initials {
+  font-family: var(--at-display);
   font-size: clamp(18px, 6vw, 30px);
   letter-spacing: 8px;
-  color: var(--at-orange);
-  background: #000;
-  border: 2px solid var(--at-orange);
+  color: var(--at-gold);
+  background: var(--at-ink);
+  border: 2px solid var(--at-pink);
+  box-shadow: 0 0 14px rgba(255, 62, 138, 0.35);
   padding: 4px 8px;
   text-align: center;
   width: 5.5em;
@@ -566,11 +764,12 @@ body.at-retro #at-crt-overlay {
 .at-hs-list {
   text-align: left;
   display: inline-block;
-  margin-top: 6px;
-  font-size: 0.95em;
+  margin-top: 4px;
+  font-size: 0.92em;
+  min-width: 11em;
 }
-.at-hs-list .at-rank { color: var(--at-cyan); display: inline-block; width: 1.6em; }
-.at-hs-list .at-sc { color: var(--at-orange); float: right; }
+.at-hs-list .at-rank { color: var(--at-cyan); display: inline-block; width: 1.6em; font-weight: 700; }
+.at-hs-list .at-sc { color: var(--at-green); float: right; font-family: var(--at-display); letter-spacing: 1px; }
 
 /* ---- Touch controls ---- */
 .at-touch { display: none; }
@@ -590,24 +789,23 @@ body.at-touch-device .at-touch {
   padding: 0 10px;
 }
 .at-tbtn {
-  font-family: var(--at-pixel);
-  font-weight: bold;
-  color: var(--at-orange);
-  background: rgba(11, 25, 44, 0.82);
+  font-family: var(--at-display);
+  color: var(--at-gold);
+  background: rgba(30, 16, 53, 0.85);
   border: 2px solid var(--at-orange-d);
-  box-shadow: 2px 2px 0 #000;
+  box-shadow: 3px 3px 0 var(--at-ink);
   width: 46px; height: 46px;
   font-size: 14px;
   cursor: pointer;
   touch-action: manipulation;
   user-select: none;
 }
-.at-tbtn:active { background: var(--at-orange); color: #0B192C; }
+.at-tbtn:active { background: var(--at-gold); color: var(--at-ink); }
 .at-tgroup { display: flex; gap: 6px; }
-.at-tbtn--scan { width: auto; padding: 0 16px; color: var(--at-cyan); border-color: var(--at-cyan); }
-.at-tbtn--scan:active { background: var(--at-cyan); color: #0B192C; }
-.at-tbtn--lamp { width: 40px; color: #FACC15; border-color: #a16207; }
-.at-tbtn--lamp:active { background: #FACC15; color: #0B192C; }
+.at-tbtn--scan { width: auto; padding: 0 16px; letter-spacing: 1.5px; color: var(--at-cyan); border-color: var(--at-cyan); box-shadow: 3px 3px 0 var(--at-ink), 0 0 10px rgba(0, 240, 255, 0.4); }
+.at-tbtn--scan:active { background: var(--at-cyan); color: var(--at-ink); }
+.at-tbtn--lamp { width: 40px; color: var(--at-gold); border-color: #a16207; }
+.at-tbtn--lamp:active { background: var(--at-gold); color: var(--at-ink); }
 
 /* ---- Footer ---- */
 .at-footer {
@@ -619,7 +817,7 @@ body.at-touch-device .at-touch {
   color: var(--at-dim);
   z-index: 6;
 }
-#at-status { color: var(--at-green); }
+#at-status { color: var(--at-cyan); font-weight: 700; }
 .at-footer-hint { color: var(--at-dim); }
 
 /* Pflichtlinks: leise, aber immer da. Werden bewusst nicht mit dem
@@ -637,17 +835,13 @@ body.at-touch-device .at-touch {
 }
 .at-legal-sep { margin: 0 4px; opacity: 0.6; }
 .at-blink {
-  color: var(--at-green);
+  color: var(--at-pink);
   animation: at-blink 1s steps(2) infinite;
 }
 
-@keyframes at-chrome-sheen {
-  from { background-position: 120% 0, 0 0; }
-  to   { background-position: -220% 0, 0 0; }
-}
 @keyframes at-pulse {
   0%, 100% { filter: brightness(1); }
-  50%      { filter: brightness(1.28); }
+  50%      { filter: brightness(1.22); box-shadow: 4px 4px 0 var(--at-ink), 0 0 28px rgba(255, 62, 138, 0.75); }
 }
 @keyframes at-blink { 50% { opacity: 0; } }
 @keyframes at-shake {
@@ -656,19 +850,25 @@ body.at-touch-device .at-touch {
   75% { transform: translateX(4px); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .at-btn--start, .at-blink, .at-serial .at-s-cur { animation: none; }
+}
+
 /* Narrow screens: stack the option grid and shrink the HUD */
 @media (max-width: 560px) {
   .at-opts, .at-fields, .at-cats { grid-template-columns: 1fr; }
-  .at-hud { font-size: 8px; letter-spacing: 0; }
-  .at-hud-cell { min-width: 0; padding: 1px 3px; }
+  .at-hud { font-size: 8px; letter-spacing: 0; gap: 3px; }
+  .at-hud-cell { min-width: 0; padding: 1px 4px 1px 3px; }
   .at-footer-hint { display: none; }
   /* .at-legal bleibt sichtbar — Pflichtangaben müssen ständig erreichbar sein */
 
   /* Auf der schmalen Bühne zählt jede Zeile: Überschriften und Abstände kleiner,
      damit das Titelpanel möglichst ohne Scrollen hineinpasst. */
   .at-panel { font-size: 11px; line-height: 1.4; }
-  .at-panel h1 { font-size: 22px; letter-spacing: 1px; }
-  .at-panel h2 { font-size: 14px; margin: 3px 0 5px; }
+  .at-panel h1 { font-size: 26px; letter-spacing: 1px; }
+  .at-panel h2 { font-size: 15px; margin: 3px 0 5px; }
   .at-panel p { margin: 2px 0; }
-  .at-btn { padding: 6px 12px; margin: 6px 3px 0; }
+  .at-script { font-size: 18px; }
+  .at-goals { gap: 2px 10px; margin: 4px 0 0; }
+  .at-btn { padding: 5px 13px 4px; margin: 6px 3px 0; }
 }

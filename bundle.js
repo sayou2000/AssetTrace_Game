@@ -91,7 +91,7 @@
     BUILDING_ASSETS: 400,
     FIELDS_PER_RECORD: 8,
 
-    VERSION: "3.2.0",
+    VERSION: "3.3.0",
     HS_KEY: "at_handover_hs_v2",
   };
 
@@ -107,17 +107,17 @@
   };
 
   const PAL = {
-    bg0: "#0B192C", bg1: "#13294b", bg2: "#1E3A8A",
+    bg0: "#140A24", bg1: "#1E1035", bg2: "#3A1D6E",
     pipe: "#2b3a55", pipeHi: "#4c6b9c", pipeLo: "#15212f",
     metal: "#3a4a66", metalHi: "#6b82a8", metalLo: "#1c2638",
     rust: "#7a3b12",
-    orange: "#FF6B00", orangeD: "#C24E00", orangeL: "#FFA45E",
-    cyan: "#22D3EE", cyanD: "#0e7490",
-    magenta: "#D946A6",
-    green: "#34D399", red: "#EF4444", yellow: "#FACC15",
-    white: "#E2E8F0", dim: "#64748B",
+    orange: "#FF7A59", orangeD: "#C2365F", orangeL: "#FFB08A",
+    cyan: "#00F0FF", cyanD: "#0891a8",
+    magenta: "#FF3E8A",
+    green: "#3DFFB0", red: "#FF4D5E", yellow: "#FFD15C",
+    white: "#F4EEFF", dim: "#8C7BB0",
     floor: "#243049", floorTop: "#3b4a6b",
-    skin: "#E8B27A", vest: "#0e7490", vestHi: "#22D3EE",
+    skin: "#E8B27A", vest: "#0891a8", vestHi: "#00F0FF",
     dark: "rgba(2,4,10,0.90)",
   };
 
@@ -1785,42 +1785,42 @@
 
   const SCN = {
     site: {                                   // 01 Bauphase: raw shell, daylight
-      sky0: "#152541", sky1: "#20395f",
-      far: "#1a2b47", farHi: "#233a5c", seam: "#111e34",
-      mid: "#172640", midHi: "#21365a",
-      near: "#111d33", nearHi: "#1a2b47",
-      ceil: "#131f36", ceilHi: "#1c2d4a",
-      lamp: "rgba(255,236,190,", lampRGB: "255,236,190",
-      haze: "rgba(255,205,140,0.05)",
-      fog: "140,185,240", horizon: "rgba(180,215,255,0.10)", grade: "rgba(255,208,130,0.14)", ambient: "rgb(180,190,212)",
+      sky0: "#2A1240", sky1: "#4A1E58",
+      far: "#2B1846", farHi: "#3A2258", seam: "#1C0F30",
+      mid: "#251540", midHi: "#33204F",
+      near: "#1C1033", nearHi: "#2A1946",
+      ceil: "#20123A", ceilHi: "#2E1B4B",
+      lamp: "rgba(255,228,190,", lampRGB: "255,228,190",
+      haze: "rgba(255,150,120,0.06)",
+      fog: "255,150,160", horizon: "rgba(255,170,120,0.12)", grade: "rgba(255,120,140,0.14)", ambient: "rgb(198,174,208)",
       wallProps: ["scaffold", "cableDrum", "pallets", "doorSteel", "signPlate", "extinguisher"],
       midProps: ["ductBox", "pipeColumn", "scaffold", "conduits", "pallets"],
       nearProps: ["ahuBox", "cabinetRow", "stairFlight", "tank"],
       openings: true, trays: 1, ducts: false, sprinkler: false, floor: "raw",
     },
     plant: {                                  // 02 Technikzentrale: dense services
-      sky0: "#0a1526", sky1: "#13284a",
-      far: "#101e35", farHi: "#182842", seam: "#0b1727",
-      mid: "#0e1b31", midHi: "#182a45",
-      near: "#0a1425", nearHi: "#132234",
-      ceil: "#0c1728", ceilHi: "#16253c",
+      sky0: "#120A26", sky1: "#1D1240",
+      far: "#181034", farHi: "#221846", seam: "#0F0A22",
+      mid: "#150E2E", midHi: "#20173F",
+      near: "#100A24", nearHi: "#191233",
+      ceil: "#130C2A", ceilHi: "#1E1640",
       lamp: "rgba(214,240,255,", lampRGB: "214,240,255",
-      haze: "rgba(120,200,255,0.04)",
-      fog: "90,170,230", horizon: "rgba(90,200,255,0.08)", grade: "rgba(110,190,255,0.13)", dado: "rgba(185,200,222,0.10)", ambient: "rgb(104,118,158)",
+      haze: "rgba(0,240,255,0.04)",
+      fog: "110,130,240", horizon: "rgba(0,240,255,0.08)", grade: "rgba(150,90,255,0.13)", dado: "rgba(200,180,240,0.10)", ambient: "rgb(122,110,172)",
       wallProps: ["hydrant", "extinguisher", "exitSign", "doorSteel", "signPlate", "radiator"],
       midProps: ["manifold", "pipeColumn", "ductBox", "pumpSet", "conduits", "vessel"],
       nearProps: ["cabinetRow", "tank", "ahuBox", "pumpSet", "stairFlight"],
       openings: false, trays: 2, ducts: true, sprinkler: true, floor: "marked",
     },
     handover: {                               // 03 Übergabetag: in service, ageing
-      sky0: "#0d1626", sky1: "#1b2d4a",
-      far: "#152338", farHi: "#1e2f48", seam: "#0e1927",
-      mid: "#111d31", midHi: "#1b2b45",
-      near: "#0c1527", nearHi: "#152334",
-      lamp: "rgba(255,225,180,", lampRGB: "255,225,180",
-      ceil: "#0e1a2d", ceilHi: "#18273e",
-      haze: "rgba(255,150,70,0.05)",
-      fog: "235,160,95", horizon: "rgba(255,150,70,0.10)", grade: "rgba(255,140,70,0.15)", dado: "rgba(225,190,150,0.10)", ambient: "rgb(160,142,130)",
+      sky0: "#1A0C26", sky1: "#33163F",
+      far: "#24142F", farHi: "#311C3E", seam: "#170C20",
+      mid: "#1F1129", midHi: "#2C1838",
+      near: "#170C21", nearHi: "#22132D",
+      lamp: "rgba(255,215,180,", lampRGB: "255,215,180",
+      ceil: "#1B0F27", ceilHi: "#281734",
+      haze: "rgba(255,90,140,0.05)",
+      fog: "255,125,130", horizon: "rgba(255,110,140,0.12)", grade: "rgba(255,90,130,0.15)", dado: "rgba(240,180,190,0.10)", ambient: "rgb(172,134,150)",
       wallProps: ["exitSign", "hydrant", "fileBoxes", "signPlate", "doorSteel", "extinguisher"],
       midProps: ["manifold", "ductBox", "pipeColumn", "fileBoxes", "vessel", "pumpSet"],
       nearProps: ["cabinetRow", "ahuBox", "tank", "cabinetRow"],
@@ -3566,7 +3566,7 @@
      Smooth system-font text with a soft shadow instead of a pixel outline.
      Same baseline semantics as the bitmap font (y = baseline of a 7px glyph
      box), so call sites keep their vertical offsets in both modes.            */
-  const FONT_HD = '600 8px "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif';
+  const FONT_HD = '600 8px "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif';
 
   function text(t, x, y, color, opts) {
     const o = opts || {};
@@ -3653,94 +3653,185 @@
   const tinyTextC = (t, x, y, c) => pxText(t, x, y, c, { center: true });
 
   /* --- animated backdrops for the non-playing states --- */
+  /* --- animated backdrops for the non-playing states --- */
+
+  /** Palmen-Silhouette: geschwungener Stamm, Wedel als spitze Blätter.
+      Leichtes Wiegen über Game.frame — rein dekorativ, deterministisch. */
+  function drawPalm(x, base, h, lean, col) {
+    const tx = x + lean, ty = base - h;
+    const sway = Math.sin(Game.frame * 0.018 + x * 0.05) * 0.05;
+    ctx.save();
+    ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineCap = "round";
+    // trunk: two strokes, thick at the base, thinner at the crown
+    ctx.lineWidth = 3.4;
+    ctx.beginPath(); ctx.moveTo(x, base);
+    ctx.quadraticCurveTo(x + lean * 0.15, base - h * 0.5, x + lean * 0.55, base - h * 0.72); ctx.stroke();
+    ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.moveTo(x + lean * 0.55, base - h * 0.72);
+    ctx.quadraticCurveTo(x + lean * 0.85, base - h * 0.88, tx, ty); ctx.stroke();
+    // fronds
+    // each frond arcs up and out, then droops; leaflets as a sawtooth underside
+    const L = h * 0.46;
+    for (let k = 0; k < 9; k++) {
+      const a = -Math.PI - 0.05 + k * ((Math.PI + 0.1) / 8) + sway;
+      const dx = Math.cos(a), up = Math.max(0, -Math.sin(a));
+      const reach = L * (0.75 + 0.25 * (1 - up));
+      const ex = tx + dx * reach, ey = ty + L * (0.42 - up * 0.32);
+      const mx = tx + dx * reach * 0.5, my = ty - L * (0.12 + up * 0.32);
+      const w = L * 0.09;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.quadraticCurveTo(mx, my - w, ex, ey);
+      // underside: leaflets hanging off the rib
+      for (let t = 1; t >= 0.15; t -= 0.12) {
+        const it = 1 - t;
+        const px = it * it * tx + 2 * it * t * mx + t * t * ex;
+        const py = it * it * ty + 2 * it * t * my + t * t * ey;
+        ctx.lineTo(px - dx * 1.5, py + L * 0.16 * (0.4 + t * 0.6));
+        ctx.lineTo(px - dx * L * 0.06, py + 0.5);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(tx, ty + 1, 2.4, 0, Math.PI * 2); ctx.fill();   // coconuts
+    ctx.restore();
+  }
+
   function renderTitleBackdrop() {
     beginFrame();
     Game.frame++;
-    const horizon = CFG.H * 0.55;
+    const horizon = CFG.H * 0.58;
+    const cx = CFG.W / 2;
 
-    // dusk gradient — deep blue falling into a warm band at the horizon
+    // sunset sky — night violet at the top burning into coral at the horizon
     const g = ctx.createLinearGradient(0, 0, 0, CFG.H);
-    g.addColorStop(0, "#0A1424"); g.addColorStop(0.48, "#16305E");
-    g.addColorStop(0.66, "#1E4A7A"); g.addColorStop(0.70, "#12233F");
-    g.addColorStop(1, "#070D1A");
+    g.addColorStop(0, "#140A24"); g.addColorStop(0.26, "#2B1050");
+    g.addColorStop(0.42, "#5E1C6C"); g.addColorStop(0.52, "#B8326F");
+    g.addColorStop(0.575, "#FF8A5B"); g.addColorStop(0.582, "#1A0B2C");
+    g.addColorStop(1, "#0A0514");
     ctx.fillStyle = g; ctx.fillRect(0, 0, CFG.W, CFG.H);
 
-    // faint data rain over the sky (deterministic columns, slow)
+    // a few twinkling stars in the upper sky (deterministic positions)
+    for (let i = 0; i < 34; i++) {
+      const sx = hash01(i * 17 + 3) * CFG.W, sy = hash01(i * 29 + 7) * horizon * 0.45;
+      const tw = 0.35 + 0.35 * Math.sin(Game.frame * 0.05 + i * 1.7);
+      ctx.fillStyle = "rgba(255,240,250," + tw.toFixed(2) + ")";
+      ctx.fillRect(sx, sy, 1, 1);
+    }
+
+    // faint data rain over the sky (deterministic columns, slow) — the product hint
     for (let i = 0; i < 14; i++) {
       const x = 10 + i * 35 + hash01(i * 5) * 12;
       const speed = 0.35 + hash01(i * 3) * 0.7;
       const y = ((Game.frame * speed + i * 53) % (CFG.H + 40)) - 20;
-      const c = i % 3 === 0 ? "rgba(52,211,153,0.18)" : "rgba(34,211,238,0.12)";
+      const c = i % 3 === 0 ? "rgba(255,62,138,0.16)" : "rgba(0,240,255,0.11)";
       for (let j = 0; j < 4; j++)
         rainGlyph(String((i * 5 + j * 3 + (Game.frame >> 4)) % 10), x | 0, (y - j * 9) | 0, c);
     }
 
-    // horizon light
-    glow(CFG.W / 2, horizon, 150, "34,211,238", 0.08);
-    glow(CFG.W / 2, horizon - 8, 95, "255,140,50", 0.14);
+    // horizon glow
+    glow(cx, horizon, 190, "255,62,138", 0.16);
+    glow(cx, horizon - 10, 110, "255,209,92", 0.16);
 
-    // sun with scanline cuts — chrome gradient body
-    const sunY = horizon - 10;
-    ctx.save();
-    const sg = ctx.createLinearGradient(0, sunY - 34, 0, sunY + 6);
-    sg.addColorStop(0, "#FFEBD0"); sg.addColorStop(0.5, "#FFB25E"); sg.addColorStop(1, "#FF6B00");
+    // sun: gold → coral → pink, cut by scanlines. The cuts are painted with the
+    // sky gradient itself, so they always match the sky behind the sun.
+    const sunY = horizon - 4, R = 46;
+    const sg = ctx.createLinearGradient(0, sunY - R, 0, sunY);
+    sg.addColorStop(0, "#FFE27A"); sg.addColorStop(0.45, "#FFB25E");
+    sg.addColorStop(0.75, "#FF7A59"); sg.addColorStop(1, "#FF3E8A");
     ctx.fillStyle = sg;
-    ctx.beginPath(); ctx.arc(CFG.W / 2, sunY, 32, Math.PI, 0); ctx.fill();
-    ctx.fillStyle = "#12233F";
-    for (let i = 0; i < 6; i++) ctx.fillRect(CFG.W / 2 - 34, sunY - 3 + i * 5.5, 68, 1.5 + i * 0.9);
-    ctx.restore();
-    // anamorphic streak across the sun
+    ctx.beginPath(); ctx.arc(cx, sunY, R, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = g;
+    for (let i = 0; i < 7; i++) ctx.fillRect(cx - R - 2, sunY - 22 + i * 3.4 + i * i * 0.18, 2 * R + 4, 0.9 + i * 0.45);
+
+    // anamorphic streak across the horizon
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    const streak = ctx.createLinearGradient(CFG.W / 2 - 150, 0, CFG.W / 2 + 150, 0);
-    streak.addColorStop(0, "rgba(140,225,255,0)");
-    streak.addColorStop(0.5, "rgba(170,235,255,0.55)");
-    streak.addColorStop(1, "rgba(140,225,255,0)");
+    const streak = ctx.createLinearGradient(cx - 180, 0, cx + 180, 0);
+    streak.addColorStop(0, "rgba(255,120,190,0)");
+    streak.addColorStop(0.5, "rgba(255,190,220,0.55)");
+    streak.addColorStop(1, "rgba(255,120,190,0)");
     ctx.fillStyle = streak;
-    ctx.fillRect(CFG.W / 2 - 150, sunY - 1.5, 300, 3);
+    ctx.fillRect(cx - 180, horizon - 1.5, 360, 3);
     ctx.restore();
 
-    // deterministic skyline with lit windows
+    // art-deco skyline: stepped tops, a few spires, warm and neon windows
     for (let i = -1; i < 26; i++) {
-      const bw = 14 + hash01(i * 13) * 24;
-      const bx = i * 22 - 8;
-      const bh = 14 + hash01(i * 7) * 44;
-      ctx.fillStyle = i % 2 ? "#0B1626" : "#0E1C31";
-      ctx.fillRect(bx, horizon - bh, bw, bh + 1);
-      ctx.fillStyle = "rgba(255,190,100,0.8)";
-      for (let wy = horizon - bh + 3; wy < horizon - 3; wy += 5)
-        for (let wx = bx + 2; wx < bx + bw - 2; wx += 4)
-          if (hash01(((wx * 31 + wy * 17) | 0) % 9973) > 0.74) ctx.fillRect(wx, wy, 1.5, 2);
+      const bw = 14 + hash01(i * 13) * 22;
+      const bx = i * 20 - 6;
+      if (Math.abs(bx + bw / 2 - cx) < R + 6 && hash01(i * 3) > 0.35) continue;  // keep the sun free
+      const bh = 12 + hash01(i * 7) * 40;
+      const top = horizon - bh;
+      ctx.fillStyle = i % 2 ? "#2A1145" : "#331552";
+      ctx.fillRect(bx, top, bw, bh + 1);
+      // stepped crown
+      const step = hash01(i * 11);
+      if (step > 0.4) {
+        ctx.fillRect(bx + bw * 0.2, top - 4, bw * 0.6, 4);
+        ctx.fillRect(bx + bw * 0.38, top - 7, bw * 0.24, 3);
+        if (step > 0.8) ctx.fillRect(bx + bw / 2 - 0.5, top - 14, 1, 7);  // spire
+      }
+      // neon trim line on some facades
+      if (hash01(i * 19) > 0.7) {
+        ctx.fillStyle = i % 3 ? "rgba(0,240,255,0.55)" : "rgba(255,62,138,0.6)";
+        ctx.fillRect(bx, top + 2, bw, 1);
+      }
+      for (let wy = top + 4; wy < horizon - 3; wy += 5)
+        for (let wx = bx + 2; wx < bx + bw - 2; wx += 4) {
+          const h = hash01(((wx * 31 + wy * 17) | 0) % 9973);
+          if (h > 0.76) {
+            ctx.fillStyle = h > 0.95 ? "rgba(0,240,255,0.85)" : "rgba(255,200,140,0.8)";
+            ctx.fillRect(wx, wy, 1.5, 2);
+          }
+        }
     }
 
-    // perspective grid below the horizon
-    ctx.strokeStyle = "rgba(34,211,238,0.28)"; ctx.lineWidth = 1;
+    // ground: sun reflection on the wet floor
+    const rg = ctx.createLinearGradient(0, horizon, 0, CFG.H);
+    rg.addColorStop(0, "rgba(255,122,89,0.35)"); rg.addColorStop(1, "rgba(255,62,138,0)");
+    ctx.fillStyle = rg;
+    for (let i = 0; i < 9; i++) {
+      const y = horizon + 2 + i * 5;
+      const w = (R * 1.6) * (1 - i * 0.08);
+      ctx.fillRect(cx - w / 2 + Math.sin(Game.frame * 0.04 + i) * 2, y, w, 1.6);
+    }
+
+    // perspective grid below the horizon: pink rungs, cyan rails
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(255,62,138,0.38)";
     for (let i = 0; i < 12; i++) {
       const y = horizon + Math.pow(i / 12, 2) * (CFG.H - horizon);
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CFG.W, y); ctx.stroke();
     }
+    ctx.strokeStyle = "rgba(0,240,255,0.30)";
     const scroll = (Game.frame * 0.6) % 80;
     for (let i = -7; i <= 7; i++) {
-      ctx.beginPath(); ctx.moveTo(CFG.W / 2, horizon);
-      ctx.lineTo(CFG.W / 2 + i * 80 + scroll, CFG.H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, horizon);
+      ctx.lineTo(cx + i * 80 + scroll, CFG.H); ctx.stroke();
     }
+
+    // palms framing the scene — near ones darker and taller
+    drawPalm(34, CFG.H + 4, 150, 16, "#0D0618");
+    drawPalm(74, CFG.H + 10, 112, -10, "#140A24");
+    drawPalm(CFG.W - 40, CFG.H + 4, 158, -18, "#0D0618");
+    drawPalm(CFG.W - 84, CFG.H + 10, 104, 12, "#140A24");
   }
 
   function renderBossBackdrop() {
     beginFrame();
     Game.frame++;
-    ctx.fillStyle = "#05070D"; ctx.fillRect(0, 0, CFG.W, CFG.H);
+    ctx.fillStyle = "#0D0618"; ctx.fillRect(0, 0, CFG.W, CFG.H);
     // falling data columns: the export stream you are racing
     for (let i = 0; i < 26; i++) {
       const x = i * 19 + 4;
       const speed = 1 + (i % 5) * 0.5;
       const y = ((Game.frame * speed + i * 47) % (CFG.H + 60)) - 30;
-      const c = i % 4 === 0 ? "rgba(52,211,153,0.55)" : "rgba(34,211,238,0.28)";
+      const c = i % 4 === 0 ? "rgba(255,62,138,0.55)" : "rgba(0,240,255,0.28)";
       for (let j = 0; j < 5; j++) {
         rainGlyph(String((i * 7 + j * 3 + (Game.frame >> 3)) % 10), x, (y - j * 10) | 0, c);
       }
     }
-    ctx.fillStyle = "rgba(255,107,0,0.10)";
+    ctx.fillStyle = "rgba(255,62,138,0.10)";
     ctx.fillRect(0, CFG.H / 2 - 40, CFG.W, 80);
   }
 
@@ -3843,6 +3934,13 @@
   /* ---------------------------------------------------------------------------
      18. DOM OVERLAYS
   --------------------------------------------------------------------------- */
+  /** "ZIELE" = die Ebenen als Checkliste. Reine Anzeige: liest nur LEVELS,
+      `done` kommt vom Aufrufer (wie viele Ebenen schon geschafft sind). */
+  function goalsHTML(done) {
+    return `<div class="at-goals"><p class="at-goals-h">ZIELE</p>${LEVELS.map((L, i) =>
+      `<span class="at-goal${i < done ? " at-goal--done" : ""}"><span class="at-check" aria-hidden="true"></span>${esc(L.name.replace(/^\d+\s*/, ""))}</span>`).join("")}</div>`;
+  }
+
   function renderTitlePanel() {
     // Drop any leftover juice from the previous run so frozen particles/floaters
     // don't sit in memory (or get drawn on top of the title backdrop) until the
@@ -3853,24 +3951,25 @@
       ? hs.map((h, i) => `<div><span class="at-rank">${i + 1}.</span>${esc(h.initials)}<span class="at-badge at-badge--${h.rank || "D"}">${esc(h.rank || "-")}</span><span class="at-sc">${h.score}</span></div>`).join("")
       : `<div class="at-dim">--- keine einträge ---</div>`;
     showOverlay(`
+      <p class="at-kicker">NEUER AUFTRAG</p>
       <h1>ASSETTRACE</h1>
-      <h2>THE HANDOVER QUEST</h2>
-      <p class="at-dim">// FM DATA CAPTURE PROTOCOL v${CFG.VERSION} //</p>
+      <p class="at-script">The Handover Quest</p>
       <p>3 Ebenen, ${TOTAL_ASSETS} Anlagen, ein Übergabetermin.</p>
       <p class="at-dim">Die Uhr läuft rückwärts. Jeder Fehler kostet Sekunden,
       jeder saubere Scan bringt welche zurück.</p>
-      <p style="margin-top:8px">
+      <p class="at-keyhint" style="margin-top:8px">
         <span class="at-keys">A/D</span> laufen &nbsp;
         <span class="at-keys">W</span> springen &nbsp;
         <span class="at-keys">SPACE</span> scannen &nbsp;
         <span class="at-keys">F</span> lampe &nbsp;
         <span class="at-keys">1-4</span> antworten
       </p>
-      <button class="at-btn at-btn--start" id="at-start">PRESS START</button>
+      ${goalsHTML(0)}<br>
+      <button class="at-btn at-btn--start" id="at-start">AUFTRAG STARTEN</button>
       <button class="at-btn at-btn--ghost" id="at-skip">PROLOG ÜBERSPRINGEN</button>
       <p class="at-dim" style="margin-top:8px">BESTENLISTE</p>
       <div class="at-hs-list">${hsHTML}</div>
-      <p class="at-creditline">GEBASTELT VON ${creditLink()}</p>
+      <p class="at-creditline">GEBASTELT VON ${creditLink()} · v${CFG.VERSION}</p>
     `, "title");
     el("at-start").onclick = () => startRun(true);
     el("at-skip").onclick = () => startRun(false);
@@ -3913,7 +4012,7 @@
     // The plate is rendered in the DOM, not only on the canvas: the player has to be
     // able to READ the serial they are copying, at any screen size.
     showOverlay(`
-      <p class="at-cyan">// SCHRITT 0 — SO LÄUFT ES HEUTE //</p>
+      <p class="at-kicker">SCHRITT 0 — SO LÄUFT ES HEUTE</p>
       <h2>MANUELLE ERFASSUNG</h2>
       <p>Kein Scanner. Kein CAFM-Import. Nur du, das Typenschild und Excel.</p>
       <div class="at-np">
@@ -3964,7 +4063,7 @@
     Audio.SFX.levelup();
     Tracking.send("prologue_done", { seconds: +secs.toFixed(1), typos: pr.typos });
     showOverlay(`
-      <p class="at-cyan">// MESSUNG //</p>
+      <p class="at-kicker">MESSUNG</p>
       <h2>${secs.toFixed(1).replace(".", ",")} s FÜR <span class="at-orange">EINE</span> ANLAGE</h2>
       <p>${pr.typos} Tippfehler. Bei einem Gebäude mit
          <span class="at-orange">${CFG.BUILDING_ASSETS} Anlagen</span> sind das</p>
@@ -3980,8 +4079,8 @@
   function renderBriefing(i) {
     const L = LEVELS[i];
     showOverlay(`
-      <p class="at-cyan">// EINSATZBESPRECHUNG //</p>
-      <h2>${esc(L.name)}</h2>
+      <p class="at-kicker">EINSATZBESPRECHUNG</p>
+      <h1>${esc(L.name)}</h1>
       ${L.brief.map(b => `<p>${esc(b)}</p>`).join("")}
       <div class="at-brief-grid">
         <div><span class="at-dim">ANLAGEN</span><br><span class="at-orange">${L.assets.length}</span></div>
@@ -3989,6 +4088,7 @@
         <div><span class="at-dim">LICHT</span><br><span class="at-orange">${L.darkzones.length ? "DUNKELZONEN" : "OK"}</span></div>
       </div>
       <p class="at-dim" style="margin-top:8px">${briefHints(L)}</p>
+      ${goalsHTML(i)}<br>
       <button class="at-btn" id="at-brief-go">LOS</button>
     `);
     el("at-brief-go").onclick = () => beginLevel(i);
@@ -4015,7 +4115,7 @@
 
   function renderPausePanel() {
     showOverlay(`
-      <h2>-- PAUSE --</h2>
+      <h1>PAUSE</h1>
       <p class="at-dim">Die Uhr steht. In der Realität nicht.</p>
       <button class="at-btn" id="at-resume">WEITER</button>
       <button class="at-btn at-btn--ghost" id="at-quit">ABBRECHEN</button>
@@ -4075,7 +4175,7 @@
     if (!t || !f) return;
     const pct = clamp(t.time / t.max, 0, 1);
     f.style.width = (pct * 100) + "%";
-    f.style.background = pct > 0.4 ? "linear-gradient(90deg,#FF6B00,#22D3EE)" : "#EF4444";
+    f.style.background = pct > 0.4 ? "linear-gradient(90deg,#FFD15C,#FF7A59,#FF3E8A)" : "#FF4D5E";
   }
 
   function renderExplainPanel() {
@@ -4103,14 +4203,15 @@
   function renderLevelDonePanel(bonus, left) {
     const s = Game.stats;
     showOverlay(`
-      <p class="at-green">// EBENE ABGESCHLOSSEN //</p>
-      <h2>${esc(Game.lvl.name)}</h2>
+      <p class="at-kicker at-kicker--good">EBENE GESCHAFFT</p>
+      <h1>${esc(Game.lvl.name)}</h1>
       <p>Alle ${Game.lvl.assets.length} Anlagen erfasst.</p>
       <p>ZEIT ÜBRIG <span class="at-cyan">${fmtTime(left)}</span>
          → BONUS <span class="at-orange">+${bonus}</span></p>
       <p>DATENQUALITÄT <span class="${s.bad ? "at-orange" : "at-green"}">${s.good}/${s.good + s.bad}</span>
          ${s.bad ? `<span class="at-red">(${s.bad} BAD DATA)</span>` : ""}</p>
       <p>SCORE <span class="at-orange">${pad(Game.score, 6)}</span></p>
+      ${goalsHTML(Game.lvlIndex + 1)}<br>
       <button class="at-btn" id="at-next">${Game.lvlIndex + 1 < LEVELS.length ? "NÄCHSTE EBENE" : "ÜBERGABETERMIN"}</button>
     `);
     el("at-next").onclick = nextLevel;
@@ -4118,6 +4219,7 @@
 
   function renderBossIntro() {
     showOverlay(`
+      <p class="at-kicker at-kicker--bad">FINALE</p>
       <h1>DER ÜBERGABETERMIN</h1>
       <p class="at-cyan">// 11:00 UHR — CAFM-EXPORT LÄUFT //</p>
       <p>${CFG.BOSS_RECORDS} Datensätze gehen jetzt raus. Jeder falsche Datensatz
@@ -4166,7 +4268,8 @@
     const failed = r.reason === "timeout";
     showOverlay(`
       <div class="at-rep-body">
-      <h1 class="${failed ? "at-h1-fail" : ""}">${failed ? "ÜBERGABE ERZWUNGEN" : "HANDOVER COMPLETE"}</h1>
+      <p class="at-kicker ${failed ? "at-kicker--bad" : "at-kicker--good"}">${failed ? "AUFTRAG GESCHEITERT" : "AUFTRAG ERLEDIGT"}</p>
+      <h1 class="${failed ? "at-h1-fail" : ""}">${failed ? "ÜBERGABE ERZWUNGEN" : "ÜBERGABE GESCHAFFT!"}</h1>
       <p class="at-dim">${failed
         ? "Der Termin war der Termin. Was jetzt nicht im CAFM steht, ist weg."
         : "Vollständig, strukturiert, im Zeitrahmen."}</p>
@@ -4234,6 +4337,7 @@
         `}
       </div>
 
+      ${rewardHTML()}
       <p class="at-cyan">INITIALEN FÜR DIE BESTENLISTE</p>
       <input id="at-initials" class="at-initials" maxlength="3" value="INS" inputmode="text" />
       <button class="at-btn" id="at-submit">SPEICHERN</button>
@@ -4282,6 +4386,210 @@
     Game.particles = []; Game.floaters = [];
     Game.state = "briefing";
     renderBriefing(Game.lvlIndex);
+  }
+
+  /* --- QR-Code für die Belohnungs-Box -----------------------------------------
+     Minimaler Encoder (Byte-Modus, Fehlerkorrektur M, Version 1–10 = bis
+     213 Bytes), damit der Code immer die aktuell konfigurierte Landing-URL
+     trägt — ohne Bibliothek, ohne externen Dienst. Nur Anzeige, keine Logik. */
+  const QR = (() => {
+    const ECC = [0, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26];   // EC-Codewörter je Block (M)
+    const BLK = [0, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5];             // Anzahl Blöcke (M)
+    function rawModules(v) {
+      let r = (16 * v + 128) * v + 64;
+      if (v >= 2) {
+        const n = Math.floor(v / 7) + 2;
+        r -= (25 * n - 10) * n - 55;
+        if (v >= 7) r -= 36;
+      }
+      return r;
+    }
+    const dataCw = v => Math.floor(rawModules(v) / 8) - ECC[v] * BLK[v];
+    function gmul(x, y) {
+      let z = 0;
+      for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; }
+      return z;
+    }
+    function rsDivisor(deg) {
+      const r = new Array(deg).fill(0); r[deg - 1] = 1;
+      let root = 1;
+      for (let i = 0; i < deg; i++) {
+        for (let j = 0; j < deg; j++) { r[j] = gmul(r[j], root); if (j + 1 < deg) r[j] ^= r[j + 1]; }
+        root = gmul(root, 2);
+      }
+      return r;
+    }
+    function rsRemainder(data, div) {
+      const r = new Array(div.length).fill(0);
+      for (const b of data) {
+        const f = b ^ r.shift(); r.push(0);
+        for (let i = 0; i < div.length; i++) r[i] ^= gmul(div[i], f);
+      }
+      return r;
+    }
+    const MASKS = [
+      (x, y) => (x + y) % 2 === 0, (x, y) => y % 2 === 0, (x, y) => x % 3 === 0,
+      (x, y) => (x + y) % 3 === 0, (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0,
+      (x, y) => x * y % 2 + x * y % 3 === 0, (x, y) => (x * y % 2 + x * y % 3) % 2 === 0,
+      (x, y) => ((x + y) % 2 + x * y % 3) % 2 === 0,
+    ];
+
+    /** Returns a boolean matrix [y][x] (true = dark) or null if the text is too long. */
+    function matrix(text) {
+      const bytes = Array.from(new TextEncoder().encode(text));
+      let v = 1;
+      while (v <= 10 && 4 + (v < 10 ? 8 : 16) + bytes.length * 8 > dataCw(v) * 8) v++;
+      if (v > 10) return null;
+
+      // data bit stream: mode, length, payload, terminator, pad
+      const bits = [];
+      const put = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+      const cap = dataCw(v) * 8;
+      put(4, 4); put(bytes.length, v < 10 ? 8 : 16); bytes.forEach(b => put(b, 8));
+      put(0, Math.min(4, cap - bits.length));
+      put(0, (8 - bits.length % 8) % 8);
+      for (let pad = 0xEC; bits.length < cap; pad ^= 0xEC ^ 0x11) put(pad, 8);
+      const data = [];
+      for (let i = 0; i < bits.length; i += 8) {
+        let b = 0; for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j]; data.push(b);
+      }
+
+      // split into blocks, add Reed-Solomon, interleave
+      const nb = BLK[v], ec = ECC[v], raw = Math.floor(rawModules(v) / 8);
+      const nShort = nb - raw % nb, shortLen = Math.floor(raw / nb);
+      const div = rsDivisor(ec), blocks = [];
+      for (let i = 0, k = 0; i < nb; i++) {
+        const dat = data.slice(k, k + shortLen - ec + (i < nShort ? 0 : 1));
+        k += dat.length;
+        const e = rsRemainder(dat, div);
+        if (i < nShort) dat.push(0);
+        blocks.push(dat.concat(e));
+      }
+      const cw = [];
+      for (let i = 0; i < blocks[0].length; i++)
+        for (let j = 0; j < nb; j++)
+          if (i !== shortLen - ec || j >= nShort) cw.push(blocks[j][i]);
+
+      // function patterns
+      const size = v * 4 + 17;
+      const M = [], F = [];
+      for (let y = 0; y < size; y++) { M.push(new Array(size).fill(false)); F.push(new Array(size).fill(false)); }
+      const set = (x, y, d) => { M[y][x] = d; F[y][x] = true; };
+      for (let i = 0; i < size; i++) { set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); }
+      const finder = (cx, cy) => {
+        for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+          const x = cx + dx, y = cy + dy;
+          if (x < 0 || y < 0 || x >= size || y >= size) continue;
+          const d = Math.max(Math.abs(dx), Math.abs(dy));
+          set(x, y, d !== 2 && d !== 4);
+        }
+      };
+      finder(3, 3); finder(size - 4, 3); finder(3, size - 4);
+      if (v > 1) {
+        const n = Math.floor(v / 7) + 2;
+        const step = Math.ceil((v * 4 + 4) / (n * 2 - 2)) * 2;
+        const pos = [6];
+        for (let p = size - 7; pos.length < n; p -= step) pos.splice(1, 0, p);
+        for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+          if ((i === 0 && j === 0) || (i === 0 && j === n - 1) || (i === n - 1 && j === 0)) continue;
+          for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++)
+            set(pos[i] + dx, pos[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+        }
+      }
+      const drawFormat = mask => {
+        const d = mask;                       // EC level M = 00
+        let r = d;
+        for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537);
+        const b = ((d << 10) | r) ^ 0x5412;
+        const bit = i => ((b >>> i) & 1) !== 0;
+        for (let i = 0; i <= 5; i++) set(8, i, bit(i));
+        set(8, 7, bit(6)); set(8, 8, bit(7)); set(7, 8, bit(8));
+        for (let i = 9; i < 15; i++) set(14 - i, 8, bit(i));
+        for (let i = 0; i < 8; i++) set(size - 1 - i, 8, bit(i));
+        for (let i = 8; i < 15; i++) set(8, size - 15 + i, bit(i));
+        set(8, size - 8, true);
+      };
+      drawFormat(0);
+      if (v >= 7) {
+        let r = v;
+        for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25);
+        const b = (v << 12) | r;
+        for (let i = 0; i < 18; i++) {
+          const d = ((b >>> i) & 1) !== 0, a = size - 11 + i % 3, c = Math.floor(i / 3);
+          set(a, c, d); set(c, a, d);
+        }
+      }
+
+      // codewords in the zigzag
+      let bi = 0;
+      const nbits = cw.length * 8;
+      for (let right = size - 1; right >= 1; right -= 2) {
+        if (right === 6) right = 5;
+        for (let vert = 0; vert < size; vert++) for (let j = 0; j < 2; j++) {
+          const x = right - j;
+          const y = ((right + 1) & 2) === 0 ? size - 1 - vert : vert;
+          if (!F[y][x] && bi < nbits) { M[y][x] = ((cw[bi >>> 3] >>> (7 - (bi & 7))) & 1) !== 0; bi++; }
+        }
+      }
+
+      // mask: pick the one with the lowest (simplified) penalty
+      const applyMask = m => {
+        for (let y = 0; y < size; y++) for (let x = 0; x < size; x++)
+          if (!F[y][x] && MASKS[m](x, y)) M[y][x] = !M[y][x];
+      };
+      const penalty = () => {
+        let p = 0, dark = 0;
+        for (let a = 0; a < size; a++) {
+          let rr = 0, rc = 0;
+          for (let b = 0; b < size; b++) {
+            if (M[a][b]) dark++;
+            rr = b && M[a][b] === M[a][b - 1] ? rr + 1 : 1;
+            rc = b && M[b][a] === M[b - 1][a] ? rc + 1 : 1;
+            if (rr === 5) p += 3; else if (rr > 5) p++;
+            if (rc === 5) p += 3; else if (rc > 5) p++;
+            if (a && b && M[a][b] === M[a - 1][b] && M[a][b] === M[a][b - 1] && M[a][b] === M[a - 1][b - 1]) p += 3;
+          }
+        }
+        const total = size * size;
+        return p + (Math.ceil(Math.abs(dark * 20 - total * 10) / total) - 1) * 10;
+      };
+      let best = 0, bestP = Infinity;
+      for (let m = 0; m < 8; m++) {
+        applyMask(m); drawFormat(m);
+        const pm = penalty();
+        if (pm < bestP) { bestP = pm; best = m; }
+        applyMask(m);
+      }
+      applyMask(best); drawFormat(best);
+      return M;
+    }
+
+    function svg(text) {
+      const M = matrix(text);
+      if (!M) return "";
+      const q = 4, n = M.length + 2 * q;
+      let d = "";
+      for (let y = 0; y < M.length; y++) for (let x = 0; x < M.length; x++)
+        if (M[y][x]) d += "M" + (x + q) + " " + (y + q) + "h1v1h-1z";
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" role="img" aria-label="QR-Code zur AssetTrace-Seite"><rect width="${n}" height="${n}" fill="#fff"/><path d="${d}" fill="#0D0618"/></svg>`;
+    }
+    return { matrix, svg };
+  })();
+
+  /** Belohnungs-Box mit QR auf die Landing-URL. CSS blendet sie nur auf großen
+      Bildschirmen mit Maus ein (Messe-Monitor) — auf dem Handy reicht der Button. */
+  function rewardHTML() {
+    let code = "";
+    try { code = QR.svg(landingURL()); } catch (e) { code = ""; }
+    if (!code) return "";
+    return `<div class="at-reward">
+        <div class="at-reward-txt">
+          <p class="at-kicker">BELOHNUNG</p>
+          <p>Handy raus, Code scannen, <span class="at-orange">AssetTrace live</span> ansehen.</p>
+          <p class="at-dim at-tiny">Gleiches Ziel wie der Button unten.</p>
+        </div>
+        <div class="at-qr">${code}</div>
+      </div>`;
   }
 
   function landingURL() {

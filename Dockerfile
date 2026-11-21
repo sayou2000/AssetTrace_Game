@@ -6,12 +6,13 @@
 FROM nginx:1.27-alpine
 
 LABEL org.opencontainers.image.title="AssetTrace: The Handover Quest"
-LABEL org.opencontainers.image.description="Y2K retro arcade marketing game about the FM handover gap"
-LABEL org.opencontainers.image.version="3.2.0"
+LABEL org.opencontainers.image.description="Sunset-neon arcade marketing game about the FM handover gap"
+LABEL org.opencontainers.image.version="3.3.0"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Static site files. og-image.png is the share card for LinkedIn/Slack previews.
 COPY index.html style.css bundle.js og-image.png /usr/share/nginx/html/
+COPY fonts/*.woff2 fonts/*.txt /usr/share/nginx/html/fonts/
 
 # Server config + the shared header snippet it includes
 COPY nginx.conf /etc/nginx/conf.d/default.conf

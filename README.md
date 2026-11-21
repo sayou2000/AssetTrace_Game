@@ -1,4 +1,4 @@
-# AssetTrace: The Handover Quest 🕹️  v3.0
+# AssetTrace: The Handover Quest 🕹️  v3.3
 
 Ein **Arcade-Spiel** im Browser mit **High-End-Vektorgrafik**: weiche Verläufe,
 Tiefenschärfe, Bloom und Ambient-Licht — alles prozedural, zur Laufzeit erzeugt.
@@ -13,6 +13,32 @@ und verwandelt visuelle Daten in strukturierte, CAFM-fähige FM-Daten.
 - **Einbettbar** per `<iframe>` oder `<assettrace-game>` Web Component in jedes CMS.
 - **`?retro=1`** schaltet auf den Pixel-/CRT-Look früherer Versionen um
   (Arcade-Gag für Messen und Nostalgie).
+
+## Was v3.3 gegenüber v3.2 ändert — „Sunset Neon“
+
+Kompletter Re-Skin im Miami-Sonnenuntergang/Synthwave-Look. **Gameplay, Physik,
+Punkte, Zeiten, Inhalte, Tracking-Events und DOM-IDs sind unverändert** — geändert
+wurden nur Farben, Schriften, Kulissen-Zeichnung und die HTML-Vorlagen der Panels.
+
+- **Farbwelt**: Nachtviolett (`#140A24`/`#1E1035`) als Basis, Sunset-Verlauf
+  Gold → Koralle → Pink (`#FFD15C`/`#FF7A59`/`#FF3E8A`) für Titel und Buttons,
+  Neon-Cyan (`#00F0FF`) für HUD, Rahmen und Scan-Elemente. Die drei Ebenen haben
+  eigene Paletten (Abenddämmerung / Neon-Nacht / Magenta-Sunset), Helligkeit wie vorher.
+- **Schriften lokal** unter `fonts/` (Anton, Inter, Yellowtail; OFL/Apache) —
+  kein Google-Fonts-CDN wegen CSP und DSGVO. Siehe `fonts/README.md`.
+- **Titelbild**: Sunset-Himmel, Sonne mit Scanline-Schnitten, Art-Déco-Skyline,
+  Palmen-Silhouetten, Neon-Raster. Panels mit „NEUER AUFTRAG“-Etikett,
+  Neon-Schreibschrift und **ZIELE** (die 3 Ebenen als Checkliste, wird beim
+  Briefing und nach jeder Ebene abgehakt — reine Anzeige).
+- **HUD** ohne Kästen: dicke Ziffern mit harter Kontur, Score in Neon-Grün.
+- **Abschluss**: „AUFTRAG ERLEDIGT · ÜBERGABE GESCHAFFT!“ und auf Seite 2 eine
+  **Belohnungs-Box mit QR-Code** auf `ASSETTRACE_LANDING` (inkl. UTM/Rang).
+  Der Code wird zur Laufzeit erzeugt (eingebauter Encoder, Byte-Modus, EC-Level M,
+  bis 213 Bytes) und erscheint nur auf großen Bildschirmen mit Maus (Messe-Monitor);
+  auf dem Handy bleibt der Button.
+- Bewusst **keine** Begriffe, Logos oder Schriften bekannter Spielemarken —
+  der Look ist eigenständig, die Texte sind eigene Formulierungen.
+- `?retro=1` bekommt zusätzlich seine Monospace-Schrift zurück.
 
 ## Was v3.2 gegenüber v3.1 ändert
 
