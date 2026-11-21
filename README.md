@@ -39,6 +39,11 @@ wurden nur Farben, Schriften, Kulissen-Zeichnung und die HTML-Vorlagen der Panel
 - Bewusst **keine** Begriffe, Logos oder Schriften bekannter Spielemarken —
   der Look ist eigenständig, die Texte sind eigene Formulierungen.
 - `?retro=1` bekommt zusätzlich seine Monospace-Schrift zurück.
+- **Musik (3.3.1):** Der hektische 133-BPM-Trance-Loop ist durch ruhigen
+  Synthwave ersetzt — 96 BPM, 16 Takte (40 s) bis zur Wiederholung, weiche
+  Flächen, Echo-Arpeggio, Lead-Melodie in Teil B. Weiterhin komplett per Web
+  Audio erzeugt (keine Audiodatei, keine Lizenzfrage), jetzt mit Lookahead auf
+  der Audio-Uhr statt `setInterval`-Tönen. Bei knapper Zeit zieht der Beat an.
 
 ## Was v3.2 gegenüber v3.1 ändert
 

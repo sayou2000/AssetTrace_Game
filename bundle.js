@@ -91,7 +91,7 @@
     BUILDING_ASSETS: 400,
     FIELDS_PER_RECORD: 8,
 
-    VERSION: "3.3.0",
+    VERSION: "3.3.1",
     HS_KEY: "at_handover_hs_v2",
   };
 
@@ -194,7 +194,7 @@
   })();
 
   /* ---------------------------------------------------------------------------
-     4. AUDIO — chiptune SFX + looping synthwave bgm (pure Web Audio synth)
+     4. AUDIO — chiptune SFX + Sunset-Synthwave-Musik (pure Web Audio synth)
   --------------------------------------------------------------------------- */
   const Audio = (function () {
     let ctx = null, master = null, musicGain = null, sfxGain = null;
@@ -291,99 +291,156 @@
       combo(n)  { tone(660 + n * 110, 0.07, "square", null, 0.16); },
     };
 
-    // --- looping trance: Am - F - C - G, supersaw stabs + 909-ish beat ---
-    const BASS = [
-      45,0,45,0, 53,0,45,0,  41,0,41,0, 53,0,41,0,
-      41,0,41,0, 53,0,41,0,  48,0,48,0, 55,0,48,0,
-      48,0,48,0, 55,0,48,0,  43,0,43,0, 55,0,43,0,
-      43,0,43,0, 55,0,43,0,  47,0,47,0, 55,0,47,0,
+    // --- Sunset-Synthwave: 96 BPM, 16 Takte (40 s) bis zur Wiederholung ---
+    // Teil A ruhig (Pad, Bass, Achtel-Arpeggio), Teil B hebt an (Sechzehntel-
+    // Arpeggio + Lead-Melodie). Noten werden mit Lookahead auf der Audio-Uhr
+    // geplant statt per setInterval abgespielt — dadurch kein Timing-Wackeln.
+    const BPM = 96, S16 = 60 / BPM / 4;
+    const CHORDS = {                       // [Bass-Grundton, Pad-Akkord] (MIDI)
+      Am: [45, [57, 60, 64]], F: [41, [57, 60, 65]], C: [36, [55, 60, 64]],
+      G: [43, [55, 59, 62]], Em: [40, [55, 59, 64]], E: [40, [56, 59, 64]],
+    };
+    const SONG = ["Am", "Am", "F", "F", "C", "C", "G", "G",
+                  "F", "G", "Em", "Am", "F", "G", "E", "E"];
+    // Lead in Teil B: je Takt [Sechzehntel, MIDI, Länge in Sechzehnteln]
+    const MEL = [
+      [[0, 72, 6], [6, 69, 2], [8, 72, 4], [12, 74, 4]],
+      [[0, 74, 6], [6, 71, 2], [8, 67, 8]],
+      [[0, 71, 6], [6, 67, 2], [8, 64, 4], [12, 67, 4]],
+      [[0, 69, 12], [12, 72, 4]],
+      [[0, 72, 6], [6, 69, 2], [8, 72, 4], [12, 77, 4]],
+      [[0, 76, 6], [6, 74, 2], [8, 71, 8]],
+      [[0, 71, 8], [8, 68, 8]],
+      [[0, 71, 4], [4, 68, 4], [8, 64, 8]],
     ];
-    const ARP = [
-      69,72,76,72, 65,69,72,69, 72,76,79,76, 67,71,74,71,
-      65,69,72,69, 60,65,69,65, 72,76,79,76, 72,74,76,74,
-      72,76,79,76, 69,72,76,72, 79,84,88,84, 71,74,77,74,
-      67,71,74,71, 62,67,71,67, 74,79,83,79, 74,76,79,76,
-    ];
-    const ROOTS = [45, 41, 48, 43];
+    const ARPI = [0, 1, 2, 1, 3, 2, 1, 2];
     const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+    let echoIn = null, noiseBuf = null, nextT = 0;
 
-    function mtone(freq, dur, type, vol, lp) {
-      if (!ctx || muted) return;
-      const t0 = ctx.currentTime;
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.type = type || "square";
-      o.frequency.setValueAtTime(freq, t0);
-      g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(vol || 0.2, t0 + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      let node = o;
-      if (lp) {
-        const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = lp;
-        o.connect(f); node = f;
-      }
-      node.connect(g); g.connect(musicGain);
-      o.start(t0); o.stop(t0 + dur + 0.02);
+    function buildBus() {
+      if (echoIn) return;
+      // punktierte Achtel als Echo für Arpeggio und Lead
+      echoIn = ctx.createGain(); echoIn.gain.value = 0.28;
+      const d = ctx.createDelay(1); d.delayTime.value = S16 * 3;
+      const fb = ctx.createGain(); fb.gain.value = 0.32;
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2200;
+      echoIn.connect(d); d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(musicGain);
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const nd = noiseBuf.getChannelData(0);
+      for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     }
-    function kick() {
-      if (!ctx || muted) return;
-      const t0 = ctx.currentTime;
+    function kick(t) {
       const o = ctx.createOscillator(), g = ctx.createGain();
       o.type = "sine";
-      o.frequency.setValueAtTime(140, t0);
-      o.frequency.exponentialRampToValueAtTime(44, t0 + 0.09);
-      g.gain.setValueAtTime(intense ? 0.55 : 0.44, t0);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.13);
+      o.frequency.setValueAtTime(120, t);
+      o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+      g.gain.setValueAtTime(intense ? 0.58 : 0.5, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
       o.connect(g); g.connect(musicGain);
-      o.start(t0); o.stop(t0 + 0.15);
+      o.start(t); o.stop(t + 0.24);
     }
-    function hat(dur, vol) {
-      if (!ctx || muted) return;
-      const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
-      const buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.4);
-      const s = ctx.createBufferSource(); s.buffer = buf;
-      const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 7200;
-      const g = ctx.createGain(); g.gain.value = vol;
-      s.connect(f); f.connect(g); g.connect(musicGain); s.start();
-    }
-    /** Detuned saw stack through a sweeping lowpass — the 1999 supersaw. */
-    function stab(root) {
-      if (!ctx || muted) return;
-      const t0 = ctx.currentTime;
-      const f = ctx.createBiquadFilter(); f.type = "lowpass";
-      f.frequency.setValueAtTime(420, t0);
-      f.frequency.exponentialRampToValueAtTime(intense ? 3000 : 2300, t0 + 0.4);
+    function noiseHit(t, dur, vol, type, freq) {
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq;
       const g = ctx.createGain();
-      g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(intense ? 0.15 : 0.11, t0 + 0.03);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
-      f.connect(g); g.connect(musicGain);
-      [root + 12, root + 19, root + 24].forEach((n, i) => {
-        [-1, 1].forEach(det => {
-          const o = ctx.createOscillator();
-          o.type = "sawtooth";
-          o.frequency.value = midi(n) * Math.pow(2, det * 0.0035);
-          const og = ctx.createGain(); og.gain.value = i === 0 ? 0.5 : 0.32;
-          o.connect(og); og.connect(f);
-          o.start(t0); o.stop(t0 + 0.55);
-        });
-      });
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f); f.connect(g); g.connect(musicGain);
+      s.start(t, Math.random() * 0.5, dur + 0.02);
     }
-    function musicStep() {
-      if (!ctx || muted) return;
-      const b = BASS[step % BASS.length], a = ARP[step % ARP.length];
-      if (step % 4 === 0) kick();
-      if (step % 2 === 1) hat(0.03, 0.05);
-      else if (step % 8 === 6) hat(0.10, 0.055);
-      if (b) mtone(midi(b), 0.17, "sawtooth", 0.22, 420);
-      if (a) mtone(midi(a), 0.07, "square", 0.045, 1600);
-      if (step % 8 === 0) stab(ROOTS[((step / 16) | 0) % 4]);
-      step++;
+    function snare(t) {
+      noiseHit(t, 0.2, 0.16, "bandpass", 1900);
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "triangle";
+      o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.08);
+      g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+      o.connect(g); g.connect(musicGain); o.start(t); o.stop(t + 0.12);
+    }
+    function bass(t, n, dur) {
+      const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      o.type = "sawtooth"; o.frequency.value = midi(n);
+      f.type = "lowpass";
+      f.frequency.setValueAtTime(intense ? 900 : 700, t);
+      f.frequency.exponentialRampToValueAtTime(220, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.17, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(f); f.connect(g); g.connect(musicGain);
+      o.start(t); o.stop(t + dur + 0.02);
+    }
+    /** Weiche Fläche: verstimmte Sägezähne, langsamer Einsatz, gedämpft. */
+    function pad(t, notes, dur) {
+      const f = ctx.createBiquadFilter(); f.type = "lowpass";
+      f.frequency.value = intense ? 1500 : 950;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.045, t + 0.45);
+      g.gain.setValueAtTime(0.045, t + dur - 0.3);
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.25);
+      f.connect(g); g.connect(musicGain);
+      notes.forEach(n => [-1, 1].forEach(det => {
+        const o = ctx.createOscillator(); o.type = "sawtooth";
+        o.frequency.value = midi(n) * Math.pow(2, det * 0.004);
+        o.connect(f); o.start(t); o.stop(t + dur + 0.3);
+      }));
+    }
+    /** Arpeggio-Pluck (sustain=false) oder Lead mit Vibrato (sustain=true), beide mit Echo. */
+    function voice(t, n, dur, type, vol, lp, sustain) {
+      const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      o.type = type; o.frequency.value = midi(n);
+      if (sustain) {
+        const l = ctx.createOscillator(), lg = ctx.createGain();
+        l.frequency.value = 5.2; lg.gain.value = midi(n) * 0.006;
+        l.connect(lg); lg.connect(o.frequency); l.start(t + 0.15); l.stop(t + dur + 0.1);
+      }
+      f.type = "lowpass"; f.frequency.value = lp;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + (sustain ? 0.04 : 0.005));
+      if (sustain) g.gain.setValueAtTime(vol, t + dur * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(f); f.connect(g); g.connect(musicGain); g.connect(echoIn);
+      o.start(t); o.stop(t + dur + 0.05);
+    }
+    function playStep(k, t) {
+      const s = k % 16, bar = ((k / 16) | 0) % SONG.length, partB = bar >= 8;
+      const [root, notes] = CHORDS[SONG[bar]];
+      const intro = k < 32;                               // 2 Takte nur Fläche + Arpeggio
+      if (!intro) {
+        if (s === 0 || s === 8 || (s === 10 && bar % 2 === 1) || (intense && (s === 4 || s === 12))) kick(t);
+        if (s === 4 || s === 12) snare(t);
+        if (s % 2 === 0) noiseHit(t, 0.03, s % 4 === 2 ? 0.05 : 0.028, "highpass", 7200);
+        else if (intense) noiseHit(t, 0.02, 0.022, "highpass", 7200);
+        if (s === 0 && (bar === 0 || bar === 8)) noiseHit(t, 1.2, 0.035, "highpass", 5000);
+        if (s % 2 === 0) bass(t, root + (s === 6 || s === 14 ? 12 : 0), S16 * 1.7);
+      }
+      if (s === 0 && (k === 0 || SONG[bar] !== SONG[(bar + SONG.length - 1) % SONG.length])) {
+        let len = 1;
+        while (bar + len < SONG.length && SONG[bar + len] === SONG[bar]) len++;
+        pad(t, notes, len * 16 * S16);
+      }
+      const fast = partB || intense;
+      if (fast || s % 2 === 0) {
+        const i = ARPI[(fast ? s : s >> 1) % 8];
+        const n = (i === 3 ? notes[0] + 12 : notes[i]) + 12;
+        voice(t, n, fast ? 0.12 : 0.2, "triangle", fast ? 0.03 : 0.035, 2600, false);
+      }
+      if (partB && !intro)
+        for (const [st, n, len] of MEL[bar - 8]) if (st === s) voice(t, n, len * S16, "sawtooth", 0.035, 1800, true);
+    }
+    function musicTick() {
+      if (!ctx) return;
+      const t = ctx.currentTime;
+      if (nextT < t - 0.25) nextT = t + 0.05;             // Tab war im Hintergrund: neu ansetzen statt nachholen
+      while (nextT < t + 0.12) {
+        if (!muted) playStep(step, nextT);
+        step++; nextT += S16;
+      }
     }
     function startMusic() {
       if (!ctx || musicTimer) return;
-      step = 0;
-      musicTimer = setInterval(musicStep, 113);   // 16ths @ ~133 BPM — trance tempo
+      buildBus();
+      step = 0; nextT = ctx.currentTime + 0.08;
+      musicTimer = setInterval(musicTick, 25);
     }
     function start() {
       init(); resume();
