@@ -3,7 +3,7 @@
 # Tiny nginx:alpine serves the prebuilt files; there is no build step.
 # Image ~10 MB, game bundle ~180 KB.
 
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 
 LABEL org.opencontainers.image.title="AssetTrace: The Handover Quest"
 LABEL org.opencontainers.image.description="Sunset-neon arcade marketing game about the FM handover gap"
@@ -21,7 +21,7 @@ COPY security-headers.conf /etc/nginx/snippets/security-headers.conf
 # NOTE: the master process still starts as root (it drops privileges for the
 # workers). Port 8080 is used anyway so the container also runs on hosts that
 # forbid privileged ports. For a genuinely rootless container switch the base image
-# to nginxinc/nginx-unprivileged:1.27-alpine — it listens on 8080 already and keeps
+# to nginxinc/nginx-unprivileged:1.31-alpine — it listens on 8080 already and keeps
 # its pid and temp files under /tmp.
 EXPOSE 8080
 
